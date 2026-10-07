@@ -9,6 +9,7 @@ import org.firstinspires.ftc.teamcode.Solvers.CommandBase.Subsystem;
 
 public class Storage extends Subsystem {
     public static boolean full = false;
+    //SY IS HERE
     public boolean contains = false;
     public boolean setup = false;
     public boolean[] list = {true,true,true};
