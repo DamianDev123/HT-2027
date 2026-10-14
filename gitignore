@@ -1,1 +1,3 @@
 .gradle/
+.FtcRobotController/
+.local.properties
