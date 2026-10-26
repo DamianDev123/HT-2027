@@ -1,17 +1,7 @@
 package org.firstinspires.ftc.teamcode.Solvers.Subsystems
 
 import com.acmerobotics.dashboard.config.Config
-import com.pedropathing.follower.Follower
-import com.pedropathing.geometry.Pose
-import com.qualcomm.robotcore.util.ElapsedTime
-import com.seattlesolvers.solverslib.hardware.servos.ServoEx
-import org.firstinspires.ftc.teamcode.Globals.Constants
-import org.firstinspires.ftc.teamcode.Globals.Robot
 import org.firstinspires.ftc.teamcode.Solvers.CommandBase.Subsystem
-
-import kotlin.math.atan2
-
-;
 @Config
 class Turret : Subsystem() {
     /*
@@ -29,14 +19,7 @@ class Turret : Subsystem() {
  * PHASE 2: PID POSITION CONTROL
  * TODO: Create a turret subsystem.
  * TODO: Implement setTargetAngle(angle: Double).
- * TODO: Convert target angle to target encoder ticks.
- * TODO: Calculate position error between target and current ticks.
- * TODO: Run PID using encoder position as feedback.
- * TODO: Apply PID output as motor power.
- * TODO: Limit motor power to prevent excessive movement.
- * TODO: Add position tolerance and deadband.
- * TODO: Add telemetry for current angle, target angle, error, and power.
- * TODO: Tune P, I, and D coefficients.
+ * TODO: Convert target angle to Servo angle,
  * TODO: Test multiple target angles and verify settling accuracy.
  *
  * PHASE 3: ROBOT LOCALIZATION
@@ -90,62 +73,15 @@ class Turret : Subsystem() {
  * 5. Velocity-based motion compensation
  * 6. Moving-shot testing and tuning
  */
-    private val robot: Robot = Robot.getInstance()
-
-    @JvmField
-    var inAuto = true;
-
-    var runningAuto = false;
-    var override = false;
-    @JvmField
-    var forcedPos = Pose(0.0,0.0)
-
-    val velocity = (60/0.110)/2
-    var currentPosition = 0.0;
-    val posTimer = ElapsedTime();
-
-    companion object {
-        @JvmField var  turretOffsetY = 0.0
-        @JvmField var absOF = 0.0;
-        @JvmField var angleComp  = -12
-        @JvmField var Fc = 0;
-        @JvmField var  turretOffsetX = -1.5
-    }
-    var follower: Follower = robot.follower
-    var turretServo2: ServoEx = robot.turretServo2
-    var turretServo1: ServoEx = robot.turretServo1
-    val filter: Filter = Filter(20)
-    var elapsedTime: ElapsedTime = ElapsedTime();
-    @JvmField
-    var tolerable = false;
-    @JvmField
-    var shouldAim = false;
     init {
-        elapsedTime.startTime()
-        elapsedTime.reset()
-        posTimer.startTime();
-        posTimer.reset();
     }
     fun setAngle(){
         // TODO: Write method to set Target Angle
     }
-    fun update() {
-
-
-        tolerable = elapsedTime.milliseconds() > 300;
-        robot.telemetry.update()
-
-        robot.profiler.end("Turret Loop")
-
-        robot.telemetry.addData("heading:", robot.follower.heading)
-    }
     override fun periodic() {
-        update()
+
     }
 
-    fun overrideTurret(p: Pose){
-        forcedPos = p;
-    }
 //    fun alignTurret(xInput: Double, yInput: Double, heading: Double, blue: Boolean): Double {
 //        val RobotHeadingDeg = Math.toDegrees(heading)
 //        val goalPose = if (blue) robot.shootingWhileMoving.getExpectedPose2(Constants.DblueGoalPose) else robot.shootingWhileMoving.getExpectedPose2(
