@@ -3,10 +3,6 @@ package org.firstinspires.ftc.teamcode.Globals;
 //import com.acmerobotics.dashboard.config.Config;
 import com.acmerobotics.dashboard.FtcDashboard;
 import com.pedropathing.follower.Follower;
-import com.pedropathing.ftc.FTCCoordinates;
-import com.pedropathing.ftc.localization.localizers.PinpointLocalizer;
-import com.pedropathing.geometry.CoordinateSystem;
-import com.pedropathing.geometry.Pose;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.hardware.DigitalChannel;
@@ -20,30 +16,18 @@ import com.seattlesolvers.solverslib.hardware.motors.Motor;
 import com.seattlesolvers.solverslib.hardware.motors.MotorEx;
 import com.seattlesolvers.solverslib.hardware.motors.MotorGroup;
 import com.seattlesolvers.solverslib.hardware.servos.ServoEx;
-import com.skeletonarmy.marrow.zones.Point;
-import com.skeletonarmy.marrow.zones.PolygonZone;
 
 import static org.firstinspires.ftc.teamcode.Globals.Constants.*;
-import static org.firstinspires.ftc.teamcode.pedroPathing.Constants.localizerConstants;
-
-import android.graphics.drawable.Drawable;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.robotcore.internal.system.AppUtil;
-import org.firstinspires.ftc.teamcode.Solvers.CommandBase.Scheduler;
-import org.firstinspires.ftc.teamcode.Solvers.Opmodes.Drawing;
 import org.firstinspires.ftc.teamcode.Solvers.Subsystems.Intake;
 import org.firstinspires.ftc.teamcode.Solvers.Subsystems.Launcher;
-import org.firstinspires.ftc.teamcode.Solvers.Subsystems.LedDriver;
-import org.firstinspires.ftc.teamcode.Solvers.Subsystems.Limelight;
 import org.firstinspires.ftc.teamcode.Solvers.Subsystems.ShootingWhileMoving;
-import org.firstinspires.ftc.teamcode.Solvers.Subsystems.Storage;
 import org.firstinspires.ftc.teamcode.Solvers.Subsystems.Turret;
-import org.firstinspires.ftc.teamcode.helpers.controllers.FusionLocalizer;
-import org.firstinspires.ftc.teamcode.pedroPathing.Poses;
 import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
 
 import java.io.File;
