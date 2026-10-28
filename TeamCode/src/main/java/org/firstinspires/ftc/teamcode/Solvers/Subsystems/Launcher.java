@@ -8,13 +8,14 @@ import dev.nextftc.control.feedback.PIDCoefficients;
 import dev.nextftc.control.feedforward.BasicFeedforwardParameters;
 
 public class Launcher extends SubsystemBase {
-    public static PIDCoefficients testPid = new PIDCoefficients(0.1, 0, 0);
+    public static PIDCoefficients testPid = new PIDCoefficients(0.01, 0, 0);
     public static BasicFeedforwardParameters timeUnit = new BasicFeedforwardParameters(0.00045, 0,  0.32);
     ControlSystem spinner = ControlSystem.builder().velPid(testPid).basicFF(timeUnit).build();
     private final Robot robot = Robot.getInstance();
 
     public boolean Near = false;
-    public double Speed;
+    public double Speed = -1500;
+
 
     private void setGoal(double speed) {
         spinner.setGoal(new KineticState(0,Math.min(speed, Constants.LAUNCHER_MAX_VELOCITY)));
@@ -25,9 +26,9 @@ public class Launcher extends SubsystemBase {
     }
 
     public void startShooter(double speed) {
-        robot.hoodServo.set(0.7);
+        //robot.hoodServo.set(0.7);
         this.Speed = speed;
-        setGoal(this.Speed);
+        setGoal(speed);
     }
 
     public void updateShooter() {

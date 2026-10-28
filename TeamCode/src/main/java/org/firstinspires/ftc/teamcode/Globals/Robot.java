@@ -44,6 +44,11 @@ public class Robot extends com.seattlesolvers.solverslib.command.Robot {
     //public Turret turret;
     public ServoEx hoodServo;
 
+    public MotorEx frontLeft;
+    public MotorEx frontRight;
+    public MotorEx backLeft;
+    public MotorEx backRight;
+
 
     public LynxModule ex;
     public List<LynxModule> hubs;
@@ -55,7 +60,7 @@ public class Robot extends com.seattlesolvers.solverslib.command.Robot {
         return instance;
     }
 
-    public void init(HardwareMap hwMap, Follower _follower){
+    public void init(HardwareMap hwMap){
         File logsFolder = new File(AppUtil.FIRST_FOLDER, "logs");
         if (!logsFolder.exists()) logsFolder.mkdirs();
         long timestamp = System.currentTimeMillis();
@@ -70,9 +75,8 @@ hubs = allHubs;
         ex = getControlHub(hwMap);
         ex.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
 
-        follower = _follower;
 
-        launchMotor = new MotorEx(hwMap, "shooterAssist")
+        launchMotor = new MotorEx(hwMap, "Shooter")
                         .setCachingTolerance(0.01);
         launchMotor.setRunMode(Motor.RunMode.RawPower);
         launchMotor.setZeroPowerBehavior(Motor.ZeroPowerBehavior.FLOAT);
@@ -88,8 +92,36 @@ hubs = allHubs;
         transferMotor.setRunMode(Motor.RunMode.RawPower);
         transferMotor.setZeroPowerBehavior(Motor.ZeroPowerBehavior.BRAKE);
         hoodServo = new ServoEx(hwMap, "Hood").setCachingTolerance(0.001);
-        launcher = new Launcher();
+        //launcher = new Launcher();
         voltageSensor = hwMap.voltageSensor;
+        // Drivetrain motors
+        frontLeft = new MotorEx(hwMap, "fl")
+                .setCachingTolerance(0.01);
+
+        frontRight = new MotorEx(hwMap, "fr")
+                .setCachingTolerance(0.01);
+
+        backLeft = new MotorEx(hwMap, "bl")
+                .setCachingTolerance(0.01);
+
+        backRight = new MotorEx(hwMap, "br")
+                .setCachingTolerance(0.01);
+
+// Open-loop drive
+        frontLeft.setRunMode(Motor.RunMode.RawPower);
+        frontRight.setRunMode(Motor.RunMode.RawPower);
+        backLeft.setRunMode(Motor.RunMode.RawPower);
+        backRight.setRunMode(Motor.RunMode.RawPower);
+
+// Brake when no power is applied
+        frontLeft.setZeroPowerBehavior(Motor.ZeroPowerBehavior.BRAKE);
+        frontRight.setZeroPowerBehavior(Motor.ZeroPowerBehavior.BRAKE);
+        backLeft.setZeroPowerBehavior(Motor.ZeroPowerBehavior.BRAKE);
+        backRight.setZeroPowerBehavior(Motor.ZeroPowerBehavior.BRAKE);
+
+// Reverse the right side if required by your motor mounting
+        frontLeft.setInverted(true);
+        backLeft.setInverted(true);
     }
     public double getBatteryVoltage() {
         double result = Double.POSITIVE_INFINITY;
