@@ -4,7 +4,7 @@ import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 
 import org.firstinspires.ftc.teamcode.Solvers.Subsystems.Launcher;
 
-public class TestTeleOp implements OpMode {
+public class TestTeleOp extends OpMode {
     Launcher shooter = new Launcher();
     @Override
     public void init() {

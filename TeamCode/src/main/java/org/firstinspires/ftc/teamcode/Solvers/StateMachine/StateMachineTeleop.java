@@ -2,7 +2,6 @@ package org.firstinspires.ftc.teamcode.Solvers.StateMachine;
 
 import static org.firstinspires.ftc.teamcode.Globals.Constants.ALLIANCE_COLOR;
 import static org.firstinspires.ftc.teamcode.Globals.Constants.autoInitialized;
-import static org.firstinspires.ftc.teamcode.Globals.Constants.blueGoalPose;
 import static org.firstinspires.ftc.teamcode.Globals.Constants.redGoalPose;
 
 import android.graphics.Color;
@@ -18,7 +17,6 @@ import com.seattlesolvers.solverslib.gamepad.GamepadEx;
 import com.seattlesolvers.solverslib.gamepad.GamepadKeys;
 
 import org.firstinspires.ftc.teamcode.Globals.Robot;
-import org.firstinspires.ftc.teamcode.Solvers.Subsystems.Intake;
 import org.firstinspires.ftc.teamcode.Solvers.Subsystems.Launcher;
 import org.firstinspires.ftc.teamcode.Solvers.Subsystems.Limelight;
 import org.firstinspires.ftc.teamcode.Solvers.Subsystems.Storage;
