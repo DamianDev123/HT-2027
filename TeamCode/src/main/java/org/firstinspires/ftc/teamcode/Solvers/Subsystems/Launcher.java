@@ -25,6 +25,8 @@ public class Launcher extends SubsystemBase {
     public static BasicFeedforwardParameters timeUnit = new BasicFeedforwardParameters(0.00045, 0,  0.32);
     ControlSystem spinner = ControlSystem.builder().velPid(testPid).basicFF(timeUnit).build();
     private final Robot robot = Robot.getInstance();
+
+    public boolean Near = false;
     public double Speed;
 
     private void setGoal(double speed) {
@@ -48,6 +50,10 @@ public class Launcher extends SubsystemBase {
 
         if (Math.abs(robot.launchMotors.getCorrectedVelocity() - Math.min(this.Speed, Constants.LAUNCHER_MAX_VELOCITY)) <= 0.25) {
             System.out.println("NEARRRRRR");
+            this.Near = true;
+        }
+        else {
+            this.Near = false;
         }
     }
 }
