@@ -1,6 +1,8 @@
+
 .gradle/
 .FtcRobotController/
 local.properties
+
 # IntelliJ IDEA
 .idea/
 *.iml
@@ -8,3 +10,4 @@ local.properties
 # Build outputs
 build/
 **/build/
+**/gradle/
