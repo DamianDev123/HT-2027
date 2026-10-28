@@ -43,9 +43,6 @@ public class Robot extends com.seattlesolvers.solverslib.command.Robot {
     public Follower follower = null;
     public MotorGroup launchMotors;
     public  Telemetry telemetry;
-    private final PolygonZone closeLaunchZone = new PolygonZone(new Point(144, 144), new Point(72, 72), new Point(0, 144));
-    private final PolygonZone farLaunchZone = new PolygonZone(new Point(48, 0), new Point(72, 24), new Point(96, 0));
-    private final PolygonZone robotZone = new PolygonZone(15, 15);
     public Motor.Encoder launchEncoder;
     public Profiler profiler;
     public File file;
@@ -54,7 +51,6 @@ public class Robot extends com.seattlesolvers.solverslib.command.Robot {
     public Launcher launcher;
     public Intake intake;
     public Turret turret;
-    public Poses poses;
     public ServoEx hoodServo;
 
     public ServoEx flapServo;
@@ -64,22 +60,15 @@ public class Robot extends com.seattlesolvers.solverslib.command.Robot {
     public ServoEx intakeServo;
     public Motor.Encoder turretEncoder;
 
-    public Pose GoalPose;
-    public Pose CurrentPose;
 
     public Servo led;
     public CRServo tilt;
-    public LedDriver ledDriver;
-    public Storage storage;
     public ShootingWhileMoving shootingWhileMoving;
     public LynxModule ex;
     public List<LynxModule> hubs;
     HardwareMap.DeviceMapping<VoltageSensor> voltageSensor = null;
     public boolean Preload = false;
     public Limelight3A ll;
-    public Limelight limelight;
-    public Pose PredictedGoalPose = new Pose();
-    public FusionLocalizer fusionLocalizer;
 
     public static Robot getInstance() {
         return instance;
@@ -101,11 +90,6 @@ hubs = allHubs;
         ex.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
 
         follower = _follower;
-        if(ALLIANCE_COLOR.equals("BLUE")){
-            GoalPose = blueGoalPose;
-        }else {
-            GoalPose = redGoalPose;
-        }
 
         launchMotors = new MotorGroup(
                 new MotorEx(hwMap, "Shooter")
@@ -147,25 +131,8 @@ hubs = allHubs;
 
         launcher = new Launcher();
         turret = new Turret();
-        poses = new Poses();
-        storage = new Storage();
-        limelight = new Limelight();
-        storage.stage1 = hwMap.get(DigitalChannel.class, "d2");
-        storage.stage2 = hwMap.get(DigitalChannel.class, "d4");
-        storage.stage3 = hwMap.get(DigitalChannel.class, "d6");
-        ledDriver = new LedDriver();
-        if(Objects.equals(ALLIANCE_COLOR, "BLUE")){
-            CurrentPose = poses.getStartFromFar().mirror();
-        }else {
-            CurrentPose = poses.getStartFromFar();
-        }
         shootingWhileMoving = new ShootingWhileMoving();
         voltageSensor = hwMap.voltageSensor;
-        //poses.buildPaths();
-    }
-
-    public Pose getPose(){
-        return CurrentPose;
     }
     public double getBatteryVoltage() {
         double result = Double.POSITIVE_INFINITY;
@@ -202,43 +169,12 @@ hubs = allHubs;
         return ll.get(0);
     }
     public void updateLoop() {
-        profiler.start("Update Loop");
         ex.clearBulkCache();
 
-        profiler.start("Subsystem Loop");
-            CommandScheduler.getInstance().run();
-            Scheduler.getInstance().periodic();
-        profiler.end("Subsystem Loop");
-            if(Limelight.followerCreated)
-                CurrentPose = Limelight.follower.getPose();
-            else
-                CurrentPose = follower.getPose();
-            robotZone.setPosition(CurrentPose.getX(), CurrentPose.getY());
-
-        Drawing.drawDebug(follower);
-
-        Drawing.drawRobot(flip(FTCCoordinates.INSTANCE.convertFromPedro(CurrentPose)),"#FFF");
-        Drawing.drawGoal(follower.getPose(),"#FFF");
-        FtcDashboard.getInstance().getTelemetry().addData("fo", CurrentPose);
+        CommandScheduler.getInstance().run();
         FtcDashboard.getInstance().getTelemetry().update();
+    }
 
-        profiler.end("Update Loop");
-      //  Drawing.drawRobot(new Pose(follower.getPose().getY(),follower.getPose().getX()),"#3F51B5");
-    }
-    Pose flip(Pose pose){
-        return new Pose(-pose.getX(),-pose.getY(),pose.getHeading()+Math.PI);
-    }
-    public boolean inZone(){
-        return robotZone.isInside(closeLaunchZone) || robotZone.isInside(farLaunchZone);
-    }
-    public boolean nearZone(){
-        double distanceToClose = robotZone.distanceTo(closeLaunchZone);
-        double x = robotZone.distanceTo(farLaunchZone);
-        if(distanceToClose<x){
-            x=distanceToClose;
-        }
-        return x<NearDistance;
-    }
     @NonNull
     public static LynxModule getControlHub(HardwareMap hardwareMap) {
         return hardwareMap.getAll(LynxModule.class)
