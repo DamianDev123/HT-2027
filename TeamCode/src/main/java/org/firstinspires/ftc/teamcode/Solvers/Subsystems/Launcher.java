@@ -21,24 +21,32 @@ import dev.nextftc.control.feedforward.BasicFeedforwardParameters;
 @Config
 public class Launcher extends SubsystemBase {
     public static PIDCoefficients testPid = new PIDCoefficients(0.1, 0, 0);
-    public BasicFeedforwardParameters timeUnit = new BasicFeedforwardParameters(0.00045, 0,  0.32);
+    public static BasicFeedforwardParameters timeUnit = new BasicFeedforwardParameters(0.00045, 0,  0.32);
     ControlSystem spinner = ControlSystem.builder().velPid(testPid).basicFF(timeUnit).build();
-    public void startLauncher() {
-        spin();
+    private final Robot robot = Robot.getInstance();
+    private double Speed;
+
+    private void setGoal(double speed) {
+        spinner.setGoal(new KineticState(0,Math.min(speed, Constants.LAUNCHER_MAX_VELOCITY)));
     }
-    boolean ready = false;
-    private final Robot robottt = Robot.getInstance();
-    public void spin() {
-        spinner.setGoal(new KineticState(0,Math.min(1000.0, Constants.LAUNCHER_MAX_VELOCITY)));
-        ready = true;
+    private void update() {
+        double output = spinner.calculate(new KineticState(0, robot.launchEncoder.getCorrectedVelocity()));
+        robot.launchMotors.set(output);
     }
 
-    public void periodic() {
-        if (ready) {
-            double output = spinner.calculate(new KineticState(0, robottt.launchEncoder.getCorrectedVelocity()));
-            robottt.launchMotors.set(output);
-        } else {
-            spin();
+    public void startShooter(double speed) {
+        robot.hoodServo.set(0.7);
+        this.Speed = speed;
+        setGoal(this.Speed);
+
+
+    }
+
+    public void updateShooter() {
+        update();
+
+        if (Math.abs(robot.launchMotors.getCorrectedVelocity() - Math.min(this.Speed, Constants.LAUNCHER_MAX_VELOCITY)) <= 0.25) {
+            System.out.println("NEARRRRRR");
         }
     }
 }
