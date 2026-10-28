@@ -11,7 +11,6 @@ import com.seattlesolvers.solverslib.command.CommandScheduler;
 import com.seattlesolvers.solverslib.hardware.motors.CRServo;
 import com.seattlesolvers.solverslib.hardware.motors.Motor;
 import com.seattlesolvers.solverslib.hardware.motors.MotorEx;
-import com.seattlesolvers.solverslib.hardware.motors.MotorGroup;
 import com.seattlesolvers.solverslib.hardware.servos.ServoEx;
 
 import static org.firstinspires.ftc.teamcode.Globals.Constants.*;
@@ -22,8 +21,7 @@ import androidx.annotation.NonNull;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.robotcore.internal.system.AppUtil;
 import org.firstinspires.ftc.teamcode.Solvers.Subsystems.Launcher;
-import org.firstinspires.ftc.teamcode.Solvers.Subsystems.Turret;
-import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
+//import org.firstinspires.ftc.teamcode.Solvers.Subsystems.Turret;
 
 import java.io.File;
 import java.util.Arrays;
@@ -35,7 +33,7 @@ import dev.nullftc.profiler.exporter.CSVProfilerExporter;
 public class Robot extends com.seattlesolvers.solverslib.command.Robot {
     private static final Robot instance = new Robot();
     public Follower follower = null;
-    public MotorGroup launchMotors;
+    public MotorEx launchMotor;
     public  Telemetry telemetry;
     public Motor.Encoder launchEncoder;
     public Profiler profiler;
@@ -43,19 +41,10 @@ public class Robot extends com.seattlesolvers.solverslib.command.Robot {
     public MotorEx intakeMotor;
     public MotorEx transferMotor;
     public Launcher launcher;
-    public Turret turret;
+    //public Turret turret;
     public ServoEx hoodServo;
 
-    public ServoEx flapServo;
-    public AprilTagProcessor aprilTag;
-    public ServoEx turretServo1;
-    public ServoEx turretServo2;
-    public ServoEx intakeServo;
-    public Motor.Encoder turretEncoder;
 
-
-    public Servo led;
-    public CRServo tilt;
     public LynxModule ex;
     public List<LynxModule> hubs;
     HardwareMap.DeviceMapping<VoltageSensor> voltageSensor = null;
@@ -83,23 +72,12 @@ hubs = allHubs;
 
         follower = _follower;
 
-        launchMotors = new MotorGroup(
-                new MotorEx(hwMap, "Shooter")
-                        .setCachingTolerance(0.01)
-                        .setInverted(true),
-                new MotorEx(hwMap, "shooterAssist")
-                        .setCachingTolerance(0.01)
-
-        );
-        ll = hwMap.get(Limelight3A.class, "ll");
-        launchMotors.setRunMode(Motor.RunMode.RawPower);
-        launchMotors.setZeroPowerBehavior(Motor.ZeroPowerBehavior.FLOAT);
-
+        launchMotor = new MotorEx(hwMap, "shooterAssist")
+                        .setCachingTolerance(0.01);
+        launchMotor.setRunMode(Motor.RunMode.RawPower);
+        launchMotor.setZeroPowerBehavior(Motor.ZeroPowerBehavior.FLOAT);
         launchEncoder = new Motor(hwMap, "Shooter").encoder;
         launchEncoder.setDirection(Motor.Direction.FORWARD);
-        intakeServo = new ServoEx(hwMap, "intakeServo")
-                .setCachingTolerance(0.01);
-        tilt= new CRServo(hwMap, "tilt");
         intakeMotor = new MotorEx(hwMap, "Intake")
                         .setCachingTolerance(0.01);
         transferMotor = new MotorEx(hwMap, "Transfer")
@@ -109,18 +87,8 @@ hubs = allHubs;
         transferMotor.setInverted(true);
         transferMotor.setRunMode(Motor.RunMode.RawPower);
         transferMotor.setZeroPowerBehavior(Motor.ZeroPowerBehavior.BRAKE);
-        led = hwMap.get(Servo.class,"led");
         hoodServo = new ServoEx(hwMap, "Hood").setCachingTolerance(0.001);
-        flapServo = new ServoEx(hwMap, "Flap").setCachingTolerance(0.001);
-
-        turretServo1 = new ServoEx(hwMap, "turretServo1")
-                        .setCachingTolerance(0.01);
-        turretServo2 = new ServoEx(hwMap, "turretServo2")
-                 .setCachingTolerance(0.01);
-
-        turretEncoder = new Motor(hwMap, "Intake").encoder;
         launcher = new Launcher();
-        turret = new Turret();
         voltageSensor = hwMap.voltageSensor;
     }
     public double getBatteryVoltage() {
@@ -133,25 +101,6 @@ hubs = allHubs;
         }
         return result;
     }
-    public double getVoltage() {
-        return 12/getBatteryVoltage();
-    }
-    public void exportProfiler(File file) {
-        RobotLog.i("Starting async profiler export to: " + file.getAbsolutePath());
-
-        Thread exportThread = new Thread(() -> {
-            try {
-                profiler.export();
-                profiler.shutdown();
-            } catch (Exception e) {
-                Log.e("An error occurred", e.toString());
-                Log.e(e.toString(), Arrays.toString(e.getStackTrace()));
-            }
-        });
-
-        exportThread.setDaemon(true);
-        exportThread.start();
-    }
     @NonNull
     public static LynxModule getExpansionHub(List<LynxModule> ll) {
         ll.removeIf((hub1)->{return hub1.isParent() ||String.valueOf(hub1.getRevProductNumber()).startsWith("1");});
@@ -162,7 +111,6 @@ hubs = allHubs;
 
         CommandScheduler.getInstance().run();
     }
-
     @NonNull
     public static LynxModule getControlHub(HardwareMap hardwareMap) {
         return hardwareMap.getAll(LynxModule.class)
