@@ -1,6 +1,4 @@
 package org.firstinspires.ftc.teamcode.Solvers.Subsystems;
-import com.acmerobotics.dashboard.FtcDashboard;
-import com.acmerobotics.dashboard.config.Config;
 
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.util.ElapsedTime;
@@ -19,7 +17,7 @@ import dev.nextftc.control.ControlSystem;
 import dev.nextftc.control.KineticState;
 import dev.nextftc.control.feedback.PIDCoefficients;
 import dev.nextftc.control.feedforward.BasicFeedforwardParameters;
-@Config
+
 public class Launcher extends SubsystemBase {
     public static PIDCoefficients testPid = new PIDCoefficients(0.1, 0, 0);
     public static BasicFeedforwardParameters timeUnit = new BasicFeedforwardParameters(0.00045, 0,  0.32);

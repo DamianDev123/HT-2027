@@ -1,5 +1,8 @@
 
+# Gradle caches
 .gradle/
+
+# FTC and local configuration
 .FtcRobotController/
 local.properties
 
@@ -10,4 +13,3 @@ local.properties
 # Build outputs
 build/
 **/build/
-**/gradle/

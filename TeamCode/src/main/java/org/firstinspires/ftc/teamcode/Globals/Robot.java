@@ -1,11 +1,8 @@
 package org.firstinspires.ftc.teamcode.Globals;
-//
-//import com.acmerobotics.dashboard.config.Config;
-import com.acmerobotics.dashboard.FtcDashboard;
+
 import com.pedropathing.follower.Follower;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.hardware.lynx.LynxModule;
-import com.qualcomm.robotcore.hardware.DigitalChannel;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.VoltageSensor;
@@ -25,15 +22,12 @@ import androidx.annotation.NonNull;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.robotcore.internal.system.AppUtil;
 import org.firstinspires.ftc.teamcode.Solvers.Subsystems.Launcher;
-import org.firstinspires.ftc.teamcode.Solvers.Subsystems.ShootingWhileMoving;
 import org.firstinspires.ftc.teamcode.Solvers.Subsystems.Turret;
 import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
 
 import java.io.File;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
-
 import dev.nullftc.profiler.Profiler;
 import dev.nullftc.profiler.entry.BasicProfilerEntryFactory;
 import dev.nullftc.profiler.exporter.CSVProfilerExporter;
@@ -49,7 +43,6 @@ public class Robot extends com.seattlesolvers.solverslib.command.Robot {
     public MotorEx intakeMotor;
     public MotorEx transferMotor;
     public Launcher launcher;
-    public Intake intake;
     public Turret turret;
     public ServoEx hoodServo;
 
@@ -63,7 +56,6 @@ public class Robot extends com.seattlesolvers.solverslib.command.Robot {
 
     public Servo led;
     public CRServo tilt;
-    public ShootingWhileMoving shootingWhileMoving;
     public LynxModule ex;
     public List<LynxModule> hubs;
     HardwareMap.DeviceMapping<VoltageSensor> voltageSensor = null;
@@ -127,11 +119,8 @@ hubs = allHubs;
                  .setCachingTolerance(0.01);
 
         turretEncoder = new Motor(hwMap, "Intake").encoder;
-        intake = new Intake();
-
         launcher = new Launcher();
         turret = new Turret();
-        shootingWhileMoving = new ShootingWhileMoving();
         voltageSensor = hwMap.voltageSensor;
     }
     public double getBatteryVoltage() {
@@ -172,7 +161,6 @@ hubs = allHubs;
         ex.clearBulkCache();
 
         CommandScheduler.getInstance().run();
-        FtcDashboard.getInstance().getTelemetry().update();
     }
 
     @NonNull
