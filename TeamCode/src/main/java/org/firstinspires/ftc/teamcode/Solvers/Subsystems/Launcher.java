@@ -7,6 +7,7 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 import com.seattlesolvers.solverslib.command.SubsystemBase;
 
+import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.teamcode.Globals.Constants;
 import org.firstinspires.ftc.teamcode.Globals.Robot;
 
@@ -24,7 +25,7 @@ public class Launcher extends SubsystemBase {
     public static BasicFeedforwardParameters timeUnit = new BasicFeedforwardParameters(0.00045, 0,  0.32);
     ControlSystem spinner = ControlSystem.builder().velPid(testPid).basicFF(timeUnit).build();
     private final Robot robot = Robot.getInstance();
-    private double Speed;
+    public double Speed;
 
     private void setGoal(double speed) {
         spinner.setGoal(new KineticState(0,Math.min(speed, Constants.LAUNCHER_MAX_VELOCITY)));

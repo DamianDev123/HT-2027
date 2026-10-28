@@ -15,5 +15,6 @@ public class TestTeleOp extends OpMode {
     @Override
     public void loop() {
         shooter.updateShooter();
+        telemetry.addData("ShooterSpeed", shooter.Speed);
     }
 }
