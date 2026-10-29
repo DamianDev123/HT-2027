@@ -26,7 +26,7 @@ public class Launcher extends SubsystemBase {
     }
 
     public void startShooter(double speed) {
-        //robot.hoodServo.set(0.7);
+        robot.hoodServo.set(0.7);
         this.Speed = speed;
         setGoal(speed);
     }
@@ -41,5 +41,9 @@ public class Launcher extends SubsystemBase {
         else {
             this.Near = false;
         }
+    }
+    @Override
+    public void periodic(){
+        updateShooter();
     }
 }

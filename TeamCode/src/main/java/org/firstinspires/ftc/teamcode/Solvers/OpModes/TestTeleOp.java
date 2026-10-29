@@ -3,6 +3,8 @@ package org.firstinspires.ftc.teamcode.Solvers.Opmodes;
 import com.acmerobotics.dashboard.config.Config;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.seattlesolvers.solverslib.gamepad.GamepadEx;
+import com.seattlesolvers.solverslib.gamepad.GamepadKeys;
 
 import org.firstinspires.ftc.teamcode.Globals.Robot;
 import org.firstinspires.ftc.teamcode.Solvers.Subsystems.Launcher;
@@ -16,14 +18,17 @@ public class TestTeleOp extends OpMode {
 
     public static int speed = -1500;
     public static double DRIVE_SPEED = 1.0;
+    GamepadEx gm1;
 
     @Override
     public void init() {
         robot.init(hardwareMap);
 
-        shooter.startShooter(1000);
+        gm1 = new GamepadEx(gamepad1);
+        robot.launcher.startShooter(1000);
 
         telemetry.addData("Status", "Initialized");
+
     }
 
     @Override
@@ -64,15 +69,13 @@ public class TestTeleOp extends OpMode {
         // Shooter
         // ========================
 
-        shooter.updateShooter();
-        shooter.startShooter(speed);
+        robot.launcher.updateShooter();
+        robot.launcher.startShooter(speed);
 
         // ========================
         // Intake
         // ========================
-
-        robot.intakeMotor.set(-gamepad1.right_trigger);
-        robot.transferMotor.set(-gamepad1.left_trigger);
+        if(gm1.getTrigger(GamepadKeys.Trigger.RIGHT_TRIGGER)>0.4) robot.schedule(robot.storage.Intake);
 
         // ========================
         // Telemetry
@@ -85,7 +88,7 @@ public class TestTeleOp extends OpMode {
         telemetry.addData("Front Right", frontRightPower);
         telemetry.addData("Back Left", backLeftPower);
         telemetry.addData("Back Right", backRightPower);
-
         telemetry.update();
+        robot.updateLoop();
     }
 }

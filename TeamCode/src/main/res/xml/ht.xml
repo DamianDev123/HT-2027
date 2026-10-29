@@ -11,10 +11,11 @@
         <LynxModule name="Expansion Hub 2" port="2">
             <goBILDA5202SeriesMotor name="br" port="0" />
             <goBILDA5202SeriesMotor name="fr" port="1" />
-
             <goBILDA5202SeriesMotor name="Transfer" port="2" />
             <goBILDA5202SeriesMotor name="Shooter" port="3" />
             <Servo name="Hood" port="0" />
+            <Servo name="Flap" port="1" />
+            <DigitalDevice name="transferBreakBeam" port="0"/>
         </LynxModule>
     </LynxUsbDevice>
 </Robot>

@@ -1,8 +1,12 @@
 package org.firstinspires.ftc.teamcode.Globals;
 
+import static org.firstinspires.ftc.robotcore.external.BlocksOpModeCompanion.hardwareMap;
+
 import com.pedropathing.follower.Follower;
+import com.pedropathing.math.Pose;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.hardware.lynx.LynxModule;
+import com.qualcomm.robotcore.hardware.DigitalChannel;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.VoltageSensor;
@@ -13,26 +17,26 @@ import com.seattlesolvers.solverslib.hardware.motors.Motor;
 import com.seattlesolvers.solverslib.hardware.motors.MotorEx;
 import com.seattlesolvers.solverslib.hardware.servos.ServoEx;
 
-import static org.firstinspires.ftc.teamcode.Globals.Constants.*;
-import android.util.Log;
-
 import androidx.annotation.NonNull;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.robotcore.internal.system.AppUtil;
 import org.firstinspires.ftc.teamcode.Solvers.Subsystems.Launcher;
-//import org.firstinspires.ftc.teamcode.Solvers.Subsystems.Turret;
+import org.firstinspires.ftc.teamcode.Solvers.Subsystems.Storage;
+import org.firstinspires.ftc.teamcode.pedro.Constants;
 
 import java.io.File;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
+
 import dev.nullftc.profiler.Profiler;
 import dev.nullftc.profiler.entry.BasicProfilerEntryFactory;
 import dev.nullftc.profiler.exporter.CSVProfilerExporter;
 
 public class Robot extends com.seattlesolvers.solverslib.command.Robot {
     private static final Robot instance = new Robot();
-    public Follower follower = null;
+    public static Follower follower = null;
     public MotorEx launchMotor;
     public  Telemetry telemetry;
     public Motor.Encoder launchEncoder;
@@ -41,26 +45,33 @@ public class Robot extends com.seattlesolvers.solverslib.command.Robot {
     public MotorEx intakeMotor;
     public MotorEx transferMotor;
     public Launcher launcher;
+    public Storage storage;
     //public Turret turret;
     public ServoEx hoodServo;
 
     public MotorEx frontLeft;
     public MotorEx frontRight;
     public MotorEx backLeft;
+    public ServoEx flap;
     public MotorEx backRight;
+    public DigitalChannel breakBeam1;
+    public Pose[] hive = new Pose[2];
+    public int hiveIndex = 0;
 
 
     public LynxModule ex;
     public List<LynxModule> hubs;
     HardwareMap.DeviceMapping<VoltageSensor> voltageSensor = null;
-    public boolean Preload = false;
-    public Limelight3A ll;
 
     public static Robot getInstance() {
         return instance;
     }
 
     public void init(HardwareMap hwMap){
+        if(follower == null){
+            follower = Constants.create(hwMap);
+            initializedPoses();
+        }
         File logsFolder = new File(AppUtil.FIRST_FOLDER, "logs");
         if (!logsFolder.exists()) logsFolder.mkdirs();
         long timestamp = System.currentTimeMillis();
@@ -72,7 +83,7 @@ hubs = allHubs;
                 .exporter(new CSVProfilerExporter(file))
                 .debugLog(false) // Log EVERYTHING
                 .build();
-        ex = getControlHub(hwMap);
+        ex = getExpansionHub(allHubs);
         ex.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
 
 
@@ -91,37 +102,17 @@ hubs = allHubs;
         transferMotor.setInverted(true);
         transferMotor.setRunMode(Motor.RunMode.RawPower);
         transferMotor.setZeroPowerBehavior(Motor.ZeroPowerBehavior.BRAKE);
+
+        flap = new ServoEx(hwMap, "Flap").setCachingTolerance(0.001);
         hoodServo = new ServoEx(hwMap, "Hood").setCachingTolerance(0.001);
-        //launcher = new Launcher();
+        breakBeam1 = hwMap.get(DigitalChannel.class, "transferBreakBeam");
+
+
+        launcher = new Launcher();
+        storage = new Storage();
+
+
         voltageSensor = hwMap.voltageSensor;
-        // Drivetrain motors
-        frontLeft = new MotorEx(hwMap, "fl")
-                .setCachingTolerance(0.01);
-
-        frontRight = new MotorEx(hwMap, "fr")
-                .setCachingTolerance(0.01);
-
-        backLeft = new MotorEx(hwMap, "bl")
-                .setCachingTolerance(0.01);
-
-        backRight = new MotorEx(hwMap, "br")
-                .setCachingTolerance(0.01);
-
-// Open-loop drive
-        frontLeft.setRunMode(Motor.RunMode.RawPower);
-        frontRight.setRunMode(Motor.RunMode.RawPower);
-        backLeft.setRunMode(Motor.RunMode.RawPower);
-        backRight.setRunMode(Motor.RunMode.RawPower);
-
-// Brake when no power is applied
-        frontLeft.setZeroPowerBehavior(Motor.ZeroPowerBehavior.BRAKE);
-        frontRight.setZeroPowerBehavior(Motor.ZeroPowerBehavior.BRAKE);
-        backLeft.setZeroPowerBehavior(Motor.ZeroPowerBehavior.BRAKE);
-        backRight.setZeroPowerBehavior(Motor.ZeroPowerBehavior.BRAKE);
-
-// Reverse the right side if required by your motor mounting
-        frontLeft.setInverted(true);
-        backLeft.setInverted(true);
     }
     public double getBatteryVoltage() {
         double result = Double.POSITIVE_INFINITY;
@@ -142,6 +133,7 @@ hubs = allHubs;
         ex.clearBulkCache();
 
         CommandScheduler.getInstance().run();
+        follower.update();
     }
     @NonNull
     public static LynxModule getControlHub(HardwareMap hardwareMap) {
@@ -151,4 +143,20 @@ hubs = allHubs;
                 .findFirst()
                 .orElseThrow(() -> new IllegalStateException("Control Hub not found"));
     }
+    public void setHive(){
+        if(Objects.equals(org.firstinspires.ftc.teamcode.Globals.Constants.ALLIANCE_COLOR, "RED")){
+            hive = org.firstinspires.ftc.teamcode.Globals.Constants.redHive;
+            hiveIndex = 1;
+        }
+        else{
+            hive = org.firstinspires.ftc.teamcode.Globals.Constants.blueHive;
+            hiveIndex=0;
+        }
+
+    }
+    public void initializedPoses() {
+        setHive();
+        follower.setPose(Objects.equals(org.firstinspires.ftc.teamcode.Globals.Constants.ALLIANCE_COLOR, "RED")? org.firstinspires.ftc.teamcode.Globals.Constants.redStartingPose : org.firstinspires.ftc.teamcode.Globals.Constants.blueStartingPose);
+    }
+
 }
