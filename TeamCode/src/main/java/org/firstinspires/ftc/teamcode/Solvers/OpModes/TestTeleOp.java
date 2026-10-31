@@ -12,7 +12,6 @@ import org.firstinspires.ftc.teamcode.Solvers.Subsystems.Launcher;
 
 @TeleOp
 public class TestTeleOp extends OpMode {
-    double distanceToGoal = 0.0;
 
     private final Robot robot = Robot.getInstance();
     private final Launcher shooter = new Launcher();
@@ -21,11 +20,7 @@ public class TestTeleOp extends OpMode {
     public static double DRIVE_SPEED = 1.0;
     GamepadEx gm1;
 
-    public double GetGoalDistance(Pose goalPose, Pose robotPose) {
-        Pose minus = goalPose.minus(robotPose);
-        distanceToGoal = Math.hypot(minus.x(), minus.y());
-        return distanceToGoal;
-    }
+
 
     @Override
     public void init() {
@@ -40,7 +35,6 @@ public class TestTeleOp extends OpMode {
 
     @Override
     public void loop() {
-        distanceToGoal = GetGoalDistance(robot.getHive(), robot.getPose());
         // ========================
         // Mecanum Drive
         // ========================
