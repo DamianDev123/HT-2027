@@ -1,0 +1,16 @@
+
+# Gradle caches
+.gradle/
+
+# FTC and local configuration
+.FtcRobotController/
+local.properties
+
+# IntelliJ IDEA
+.idea/
+*.iml
+
+# Build outputs
+build/
+**/build/
+.idea

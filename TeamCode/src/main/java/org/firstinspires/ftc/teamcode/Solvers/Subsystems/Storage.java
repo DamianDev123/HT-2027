@@ -1,62 +1,66 @@
 package org.firstinspires.ftc.teamcode.Solvers.Subsystems;
 
+import com.bylazar.configurables.annotations.Configurable;
 import com.qualcomm.robotcore.hardware.DigitalChannel;
-import com.qualcomm.robotcore.util.ElapsedTime;
+import com.seattlesolvers.solverslib.command.InstantCommand;
+import com.seattlesolvers.solverslib.command.SequentialCommandGroup;
 import com.seattlesolvers.solverslib.command.SubsystemBase;
+import com.seattlesolvers.solverslib.command.WaitCommand;
+import com.seattlesolvers.solverslib.command.WaitUntilCommand;
 
 import org.firstinspires.ftc.teamcode.Globals.Robot;
-import org.firstinspires.ftc.teamcode.Solvers.CommandBase.Subsystem;
 
-public class Storage extends Subsystem {
+import java.util.function.BooleanSupplier;
+
+@Configurable
+public class Storage extends SubsystemBase {
+    private final Robot robot = Robot.getInstance();
+    private DigitalChannel transfer;
     public static boolean full = false;
-    public boolean contains = false;
-    public boolean setup = false;
-    public boolean[] list = {true,true,true};
-    public DigitalChannel stage1 = null;
-    public DigitalChannel stage2 = null;
-    public Robot robot = Robot.getInstance();
+    public double flapDown = 0.0;
+    public double flapUp = 0.0;
+    private boolean intaking = false;
+    private boolean shooting = false; // Added to track shooting state
 
-    public DigitalChannel stage3 = null;
-    ElapsedTime timer = new ElapsedTime();
-    ElapsedTime timer2 = new ElapsedTime();
-    public boolean emptyF = false;
-    public Storage() {
-        timer.startTime();
-        timer.reset();
-        timer2.startTime();
-        timer2.reset();
-    }
-    void update(){
+    BooleanSupplier notIntaking = () -> !intaking;
 
-        if(stage1==null) return;
-        list[0] = !stage1.getState();
-        list[1] = !stage2.getState();
-        list[2] = !stage3.getState();
-        if(list[0] && list[1] && list[2]){
-            Intake.intakeUp();
-        }else {
-            timer2.reset();
-        }
-        if(full && !setup){
-            setup = true;
-            Intake.intakeUp();
-        }
-        if(timer2.milliseconds()>500)
-            full = true;
-        if(Launcher.isFlapOpen){
-            full = false;
-            setup = false;
-        }
-        contains = list[0] || list[1] || list[2];
-        if(contains)
-            timer.reset();
-        emptyF = timer.milliseconds()>100;
-    }
-    public void resetFull(){
-        full = list[0] && list[1] && list[2];
+    public InstantCommand Intake = new InstantCommand(() -> {
+        if(!full)
+            robot.transferMotor.set(-1);
+        robot.intakeMotor.set(-1);
+        intaking = true;
+    });
+
+    public InstantCommand Outake = new InstantCommand(() -> {
+        robot.transferMotor.set(0);
+        robot.intakeMotor.set(0);
+        intaking = false;
+        shooting = false; // Reset shooting state when stopping
+    });
+
+    public InstantCommand SingularShot = new InstantCommand(() -> {
+                shooting = true; // Ignore transfer state while shooting
+                full = false;
+                robot.intakeMotor.set(-1);
+                robot.transferMotor.set(-1);
+            });
+
+
+    public InstantCommand FlapDown = new InstantCommand(() -> {
+        robot.flap.set(flapDown);
+    });
+
+    public InstantCommand FlapUp = new InstantCommand(() -> {
+        robot.flap.set(flapUp);
+    });
+    public Storage(){
+        transfer = robot.breakBeam1;
     }
     @Override
     public void periodic() {
-        update();
+        // Only update 'full' from the break beam if we are NOT currently shooting
+        if (!shooting && transfer.getState()) {
+            full = true;
+        }
     }
 }
