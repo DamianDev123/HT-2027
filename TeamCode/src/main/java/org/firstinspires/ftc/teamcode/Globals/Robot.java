@@ -130,9 +130,8 @@ hubs = allHubs;
         ll.removeIf((hub1)->{return hub1.isParent() ||String.valueOf(hub1.getRevProductNumber()).startsWith("1");});
         return ll.get(0);
     }
-    private final Robot robot = Robot.getInstance();
     public void updateLoop() {
-        hiveIndex = (robot.getPose().y() > 70.75)? 1:0;
+        hiveIndex = (getPose().y() > 70.75)? 1:0;
         ex.clearBulkCache();
 
         CommandScheduler.getInstance().run();
