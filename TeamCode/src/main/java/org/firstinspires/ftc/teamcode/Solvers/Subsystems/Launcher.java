@@ -1,4 +1,6 @@
 package org.firstinspires.ftc.teamcode.Solvers.Subsystems;
+
+import com.bylazar.configurables.annotations.Configurable;
 import com.seattlesolvers.solverslib.command.SubsystemBase;
 import org.firstinspires.ftc.teamcode.Globals.Constants;
 import org.firstinspires.ftc.teamcode.Globals.Robot;
@@ -6,15 +8,16 @@ import dev.nextftc.control.ControlSystem;
 import dev.nextftc.control.KineticState;
 import dev.nextftc.control.feedback.PIDCoefficients;
 import dev.nextftc.control.feedforward.BasicFeedforwardParameters;
-
+@Configurable
 public class Launcher extends SubsystemBase {
     public static PIDCoefficients testPid = new PIDCoefficients(0.01, 0, 0);
-    public static BasicFeedforwardParameters timeUnit = new BasicFeedforwardParameters(0.00045, 0,  0.32);
+    public static BasicFeedforwardParameters timeUnit = new BasicFeedforwardParameters(0.00032, 0,  0.09);
     ControlSystem spinner = ControlSystem.builder().velPid(testPid).basicFF(timeUnit).build();
     private final Robot robot = Robot.getInstance();
 
     public boolean Near = false;
-    public double Speed = -1500;
+    public static double ServoPos = 0.65;
+    public static double Speed = 1500;
 
 
     private void setGoal(double speed) {
@@ -26,14 +29,14 @@ public class Launcher extends SubsystemBase {
     }
 
     public void startShooter(double speed) {
-        robot.hoodServo.set(0.7);
+        ServoPos = 0.65;
         this.Speed = speed;
-        setGoal(speed);
+        setGoal(-speed);
     }
 
     public void updateShooter() {
         update();
-
+        robot.hoodServo.set(ServoPos);
         if (Math.abs(robot.launchMotor.getCorrectedVelocity() - Math.min(this.Speed, Constants.LAUNCHER_MAX_VELOCITY)) <= 0.25) {
             System.out.println("NEARRRRRR");
             this.Near = true;
@@ -44,6 +47,7 @@ public class Launcher extends SubsystemBase {
     }
     @Override
     public void periodic(){
+        setGoal(-Speed);
         updateShooter();
     }
 }

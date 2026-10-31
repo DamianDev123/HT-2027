@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode.Solvers.Subsystems;
 
+import com.bylazar.configurables.annotations.Configurable;
 import com.qualcomm.robotcore.hardware.DigitalChannel;
 import com.seattlesolvers.solverslib.command.InstantCommand;
 import com.seattlesolvers.solverslib.command.SequentialCommandGroup;
@@ -11,6 +12,7 @@ import org.firstinspires.ftc.teamcode.Globals.Robot;
 
 import java.util.function.BooleanSupplier;
 
+@Configurable
 public class Storage extends SubsystemBase {
     private final Robot robot = Robot.getInstance();
     private DigitalChannel transfer;
@@ -36,33 +38,13 @@ public class Storage extends SubsystemBase {
         shooting = false; // Reset shooting state when stopping
     });
 
-    public SequentialCommandGroup SingularShot = new SequentialCommandGroup(
-            new InstantCommand(() -> {
+    public InstantCommand SingularShot = new InstantCommand(() -> {
                 shooting = true; // Ignore transfer state while shooting
                 full = false;
                 robot.intakeMotor.set(-1);
                 robot.transferMotor.set(-1);
-            }),
-            new WaitCommand(500),
-            Outake
-    );
+            });
 
-    public SequentialCommandGroup ContinousShot = new SequentialCommandGroup(
-            new InstantCommand(() -> {
-                shooting = true; // Ignore transfer state while shooting
-                full = false;
-                robot.intakeMotor.set(-1);
-                robot.transferMotor.set(-1);
-            }),
-            new WaitUntilCommand(notIntaking),
-            Outake
-    );
-
-    public SequentialCommandGroup Shoot() {
-        if(intaking)
-            return ContinousShot;
-        return SingularShot;
-    }
 
     public InstantCommand FlapDown = new InstantCommand(() -> {
         robot.flap.set(flapDown);

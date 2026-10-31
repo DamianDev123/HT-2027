@@ -23,24 +23,20 @@ import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.robotcore.internal.system.AppUtil;
 import org.firstinspires.ftc.teamcode.Solvers.Subsystems.Launcher;
 import org.firstinspires.ftc.teamcode.Solvers.Subsystems.Storage;
-import org.firstinspires.ftc.teamcode.pedro.Constants;
+import org.firstinspires.ftc.teamcode.Solvers.Subsystems.Turret;
+import org.firstinspires.ftc.teamcode.helpers.Drawing;
 
 import java.io.File;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
-import dev.nullftc.profiler.Profiler;
-import dev.nullftc.profiler.entry.BasicProfilerEntryFactory;
-import dev.nullftc.profiler.exporter.CSVProfilerExporter;
-
 public class Robot extends com.seattlesolvers.solverslib.command.Robot {
     private static final Robot instance = new Robot();
-    public static Follower follower = null;
+    public Follower follower = null;
     public MotorEx launchMotor;
     public  Telemetry telemetry;
     public Motor.Encoder launchEncoder;
-    public Profiler profiler;
     public File file;
     public MotorEx intakeMotor;
     public MotorEx transferMotor;
@@ -52,14 +48,18 @@ public class Robot extends com.seattlesolvers.solverslib.command.Robot {
     public MotorEx frontLeft;
     public MotorEx frontRight;
     public MotorEx backLeft;
+    public MotorEx turretMotor;
+    public Motor.Encoder turretEncoder;
     public ServoEx flap;
     public MotorEx backRight;
     public DigitalChannel breakBeam1;
+    public Turret turret;
     public Pose[] hive = new Pose[2];
     public int hiveIndex = 0;
 
 
     public LynxModule ex;
+    Drawing drawing;
     public List<LynxModule> hubs;
     HardwareMap.DeviceMapping<VoltageSensor> voltageSensor = null;
 
@@ -68,21 +68,16 @@ public class Robot extends com.seattlesolvers.solverslib.command.Robot {
     }
 
     public void init(HardwareMap hwMap){
-        if(follower == null){
-            follower = Constants.create(hwMap);
-            initializedPoses();
-        }
+
+        follower = org.firstinspires.ftc.teamcode.pedro.Constants.create(hwMap);
+        initializedPoses();
+
         File logsFolder = new File(AppUtil.FIRST_FOLDER, "logs");
         if (!logsFolder.exists()) logsFolder.mkdirs();
         long timestamp = System.currentTimeMillis();
         file = new File(logsFolder, "profiler-" + timestamp + ".csv");
         List<LynxModule> allHubs = hwMap.getAll(LynxModule.class);
 hubs = allHubs;
-        profiler = Profiler.builder()
-                .factory(new BasicProfilerEntryFactory())
-                .exporter(new CSVProfilerExporter(file))
-                .debugLog(false) // Log EVERYTHING
-                .build();
         ex = getExpansionHub(allHubs);
         ex.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
 
@@ -92,6 +87,9 @@ hubs = allHubs;
         launchMotor.setRunMode(Motor.RunMode.RawPower);
         launchMotor.setZeroPowerBehavior(Motor.ZeroPowerBehavior.FLOAT);
         launchEncoder = new Motor(hwMap, "Shooter").encoder;
+        turretMotor = new MotorEx(hwMap, "Turret")
+                .setCachingTolerance(0.01);
+        turretEncoder = new Motor(hwMap, "Turret").encoder;
         launchEncoder.setDirection(Motor.Direction.FORWARD);
         intakeMotor = new MotorEx(hwMap, "Intake")
                         .setCachingTolerance(0.01);
@@ -109,10 +107,13 @@ hubs = allHubs;
 
 
         launcher = new Launcher();
+        turret = new Turret();
         storage = new Storage();
-
+        launcher.startShooter(1500);
 
         voltageSensor = hwMap.voltageSensor;
+        Drawing.init();
+
     }
     public double getBatteryVoltage() {
         double result = Double.POSITIVE_INFINITY;
@@ -133,6 +134,10 @@ hubs = allHubs;
         ex.clearBulkCache();
 
         CommandScheduler.getInstance().run();
+        // Inside your loop:
+        Drawing.drawRobot(follower.pose());
+        Drawing.drawTarget(getHive());
+        Drawing.update();
         follower.update();
     }
     @NonNull
@@ -143,14 +148,26 @@ hubs = allHubs;
                 .findFirst()
                 .orElseThrow(() -> new IllegalStateException("Control Hub not found"));
     }
+    public Pose getPose(){
+        return follower.pose();
+    }
+    public void cycleHive(){
+        if(hiveIndex == 0)
+            hiveIndex = 1;
+        else
+            hiveIndex = 0;
+    }
+    public Pose getHive(){
+        return hive[hiveIndex];
+    }
     public void setHive(){
         if(Objects.equals(org.firstinspires.ftc.teamcode.Globals.Constants.ALLIANCE_COLOR, "RED")){
             hive = org.firstinspires.ftc.teamcode.Globals.Constants.redHive;
-            hiveIndex = 1;
+            hiveIndex = 0;
         }
         else{
             hive = org.firstinspires.ftc.teamcode.Globals.Constants.blueHive;
-            hiveIndex=0;
+            hiveIndex = 1;
         }
 
     }

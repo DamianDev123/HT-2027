@@ -1,6 +1,5 @@
 package org.firstinspires.ftc.teamcode.Solvers.Opmodes;
 
-import com.acmerobotics.dashboard.config.Config;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.seattlesolvers.solverslib.gamepad.GamepadEx;
@@ -9,7 +8,6 @@ import com.seattlesolvers.solverslib.gamepad.GamepadKeys;
 import org.firstinspires.ftc.teamcode.Globals.Robot;
 import org.firstinspires.ftc.teamcode.Solvers.Subsystems.Launcher;
 
-@Config
 @TeleOp
 public class TestTeleOp extends OpMode {
 
