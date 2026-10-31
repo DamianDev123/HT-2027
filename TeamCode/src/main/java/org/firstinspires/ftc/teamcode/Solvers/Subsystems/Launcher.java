@@ -2,6 +2,8 @@ package org.firstinspires.ftc.teamcode.Solvers.Subsystems;
 
 import com.bylazar.configurables.annotations.Configurable;
 import com.seattlesolvers.solverslib.command.SubsystemBase;
+import com.seattlesolvers.solverslib.util.LUT;
+
 import org.firstinspires.ftc.teamcode.Globals.Constants;
 import org.firstinspires.ftc.teamcode.Globals.Robot;
 import dev.nextftc.control.ControlSystem;
@@ -10,6 +12,13 @@ import dev.nextftc.control.feedback.PIDCoefficients;
 import dev.nextftc.control.feedforward.BasicFeedforwardParameters;
 @Configurable
 public class Launcher extends SubsystemBase {
+    public static LUT<Double, Double> DistanceToVelLUT = new LUT<Double, Double>()
+    {{
+        add(0.0, 1.0);
+        add(3.0, 5.0);
+        add(5.0, 8.0);
+    }};
+
     public static PIDCoefficients testPid = new PIDCoefficients(0.01, 0, 0);
     public static BasicFeedforwardParameters timeUnit = new BasicFeedforwardParameters(0.00032, 0,  0.09);
     ControlSystem spinner = ControlSystem.builder().velPid(testPid).basicFF(timeUnit).build();

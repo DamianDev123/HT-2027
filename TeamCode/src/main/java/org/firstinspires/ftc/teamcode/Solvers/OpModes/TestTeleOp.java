@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.Solvers.Opmodes;
 
+import com.pedropathing.math.Pose;
+import com.qualcomm.hardware.sparkfun.SparkFunOTOS;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.seattlesolvers.solverslib.gamepad.GamepadEx;
@@ -10,6 +12,7 @@ import org.firstinspires.ftc.teamcode.Solvers.Subsystems.Launcher;
 
 @TeleOp
 public class TestTeleOp extends OpMode {
+    double distanceToGoal = 0.0;
 
     private final Robot robot = Robot.getInstance();
     private final Launcher shooter = new Launcher();
@@ -17,6 +20,13 @@ public class TestTeleOp extends OpMode {
     public static int speed = -1500;
     public static double DRIVE_SPEED = 1.0;
     GamepadEx gm1;
+
+    public double GetGoalDistance(double x, double y, Pose robotPose) {
+        Pose goalPose = new Pose(x, y);
+        Pose minus = goalPose.minus(robotPose);
+        distanceToGoal = Math.hypot(minus.x(), minus.y());
+        return distanceToGoal;
+    }
 
     @Override
     public void init() {
@@ -31,7 +41,24 @@ public class TestTeleOp extends OpMode {
 
     @Override
     public void loop() {
+        Pose robotPose = robot.getPose();
 
+        if (true) {
+            if (robotPose.y() > 70.75) {
+                distanceToGoal = GetGoalDistance(57.5, 91.5, robotPose);
+            }
+            else {
+                distanceToGoal = GetGoalDistance(57.5, 50, robotPose);
+            }
+        }
+        else {
+            if (robotPose.y() > 70.75) {
+                distanceToGoal = GetGoalDistance(84, 91.5, robotPose);
+            }
+            else {
+                distanceToGoal = GetGoalDistance(84, 50, robotPose);
+            }
+        }
         // ========================
         // Mecanum Drive
         // ========================
