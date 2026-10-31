@@ -21,9 +21,9 @@ public class Launcher extends SubsystemBase {
 
     public static LUT<Double, Double> distanceToAngleLUT = new LUT<Double, Double>()
     {{
-        add(0.0, 0.5);
-        add(3.0, 0.7);
-        add(5.0, 1.0);
+        add(0.0, 0.0);
+        add(3.0, 0.1);
+        add(5.0, 0.2);
     }};
 
     public static PIDCoefficients testPid = new PIDCoefficients(0.01, 0, 0);
@@ -37,6 +37,7 @@ public class Launcher extends SubsystemBase {
     public double goalDistance = 0.0;
     
     // Manual
+    public static double minimumHood = 0.0;
     public static boolean manualTuning = false;
     public static double manualSpeed = 0.0;
     public static double manualHood = 0.0;
@@ -70,6 +71,7 @@ public class Launcher extends SubsystemBase {
             servoPos = manualHood;
             speed = manualSpeed;
         }
+        servoPos += minimumHood;
         setGoal(-speed);
         updateShooter();
     }
