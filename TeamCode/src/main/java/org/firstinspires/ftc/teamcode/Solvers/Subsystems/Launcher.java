@@ -19,6 +19,13 @@ public class Launcher extends SubsystemBase {
         add(5.0, 8.0);
     }};
 
+    public static LUT<Double, Double> DistanceToAngleLUT = new LUT<Double, Double>()
+    {{
+        add(0.0, 1.0);
+        add(3.0, 5.0);
+        add(5.0, 8.0);
+    }};
+
     public static PIDCoefficients testPid = new PIDCoefficients(0.01, 0, 0);
     public static BasicFeedforwardParameters timeUnit = new BasicFeedforwardParameters(0.00032, 0,  0.09);
     ControlSystem spinner = ControlSystem.builder().velPid(testPid).basicFF(timeUnit).build();
