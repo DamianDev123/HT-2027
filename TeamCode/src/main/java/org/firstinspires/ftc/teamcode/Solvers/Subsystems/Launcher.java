@@ -21,9 +21,9 @@ public class Launcher extends SubsystemBase {
 
     public static LUT<Double, Double> distanceToAngleLUT = new LUT<Double, Double>()
     {{
-        add(0.0, 1.0);
-        add(3.0, 5.0);
-        add(5.0, 8.0);
+        add(0.0, 0.5);
+        add(3.0, 0.7);
+        add(5.0, 1.0);
     }};
 
     public static PIDCoefficients testPid = new PIDCoefficients(0.01, 0, 0);
