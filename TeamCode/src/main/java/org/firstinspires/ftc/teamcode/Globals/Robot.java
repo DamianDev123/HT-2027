@@ -130,12 +130,12 @@ hubs = allHubs;
         ll.removeIf((hub1)->{return hub1.isParent() ||String.valueOf(hub1.getRevProductNumber()).startsWith("1");});
         return ll.get(0);
     }
-    private double GetDistance(Pose pose, Pose secondPose) {
+    private double getDistance(Pose pose, Pose secondPose) {
         Pose minus = secondPose.minus(pose);
         return Math.hypot(minus.x(), minus.y());
     }
-    public double GetGoalDistance() {
-        return GetDistance(getPose(), getHive());
+    public double getGoalDistance() {
+        return getDistance(getPose(), getHive());
     }
     public void updateLoop() {
         hiveIndex = (getPose().y() > 70.75)? 1:0;

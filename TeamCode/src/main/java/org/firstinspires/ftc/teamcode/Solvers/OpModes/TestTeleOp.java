@@ -82,8 +82,8 @@ public class TestTeleOp extends OpMode {
         // Telemetry
         // ========================
 
-        telemetry.addData("ShooterSpeed", shooter.Speed);
-        telemetry.addData("ShooterNear", shooter.Near);
+        telemetry.addData("ShooterSpeed", shooter.speed);
+        telemetry.addData("ShooterNear", shooter.near);
 
         telemetry.addData("Front Left", frontLeftPower);
         telemetry.addData("Front Right", frontRightPower);
