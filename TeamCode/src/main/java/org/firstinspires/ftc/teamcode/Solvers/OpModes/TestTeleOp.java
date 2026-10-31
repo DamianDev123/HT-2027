@@ -21,8 +21,7 @@ public class TestTeleOp extends OpMode {
     public static double DRIVE_SPEED = 1.0;
     GamepadEx gm1;
 
-    public double GetGoalDistance(double x, double y, Pose robotPose) {
-        Pose goalPose = new Pose(x, y);
+    public double GetGoalDistance(Pose goalPose, Pose robotPose) {
         Pose minus = goalPose.minus(robotPose);
         distanceToGoal = Math.hypot(minus.x(), minus.y());
         return distanceToGoal;
@@ -41,24 +40,7 @@ public class TestTeleOp extends OpMode {
 
     @Override
     public void loop() {
-        Pose robotPose = robot.getPose();
-
-        if (true) {
-            if (robotPose.y() > 70.75) {
-                distanceToGoal = GetGoalDistance(57.5, 91.5, robotPose);
-            }
-            else {
-                distanceToGoal = GetGoalDistance(57.5, 50, robotPose);
-            }
-        }
-        else {
-            if (robotPose.y() > 70.75) {
-                distanceToGoal = GetGoalDistance(84, 91.5, robotPose);
-            }
-            else {
-                distanceToGoal = GetGoalDistance(84, 50, robotPose);
-            }
-        }
+        distanceToGoal = GetGoalDistance(robot.getHive(), robot.getPose());
         // ========================
         // Mecanum Drive
         // ========================
