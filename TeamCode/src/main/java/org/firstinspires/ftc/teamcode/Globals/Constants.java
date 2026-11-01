@@ -5,7 +5,7 @@ import com.pedropathing.math.Pose;
 //import com.acmerobotics.dashboard.config.Config;
 public class Constants {
     public static OpModeType OP_MODE_TYPE;
-    public static Pose redStartingPose = new Pose(30,9, Math.PI/2);
+    public static Pose redStartingPose = new Pose(36,9, Math.PI/2);
     public static Pose blueStartingPose = new Pose(111,133,-Math.PI/2);
 
     public static String ALLIANCE_COLOR = "BLUE";

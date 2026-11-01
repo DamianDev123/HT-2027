@@ -1,4 +1,3 @@
-
 package org.firstinspires.ftc.teamcode.helpers;
 
 import com.bylazar.field.FieldManager;
@@ -8,24 +7,19 @@ import com.pedropathing.math.Pose;
 
 public class Drawing {
 
-    private static final double ROBOT_RADIUS = 8.0;
+    private static final double ROBOT_WIDTH = 16.0;
+    private static final double ROBOT_LENGTH = 18.0;
     private static final double HEADING_LENGTH = 12.0;
-
-    private static final int ROBOT_SEGMENTS = 48;
+    private static final double TARGET_RADIUS = 3.0;
     private static final int TARGET_SEGMENTS = 24;
-
     private static final FieldManager panelsField =
             PanelsField.INSTANCE.getField();
-
     private static final Style robotStyle =
             new Style("", "#2196F3", 0.0);
-
     private static final Style targetStyle =
             new Style("", "#F44336", 0.0);
-
     private static final Style lineStyle =
             new Style("", "#4CAF50", 0.0);
-
     /**
      * Initialize Panels field.
      */
@@ -66,6 +60,51 @@ public class Drawing {
     }
 
     /**
+     * Draw a rotated rectangle.
+     */
+    public static void drawRectangle(
+            double x,
+            double y,
+            double width,
+            double length,
+            double heading
+    ) {
+        double halfWidth = width / 2.0;
+        double halfLength = length / 2.0;
+
+        // Local rectangle corners
+        double[][] corners = {
+                {-halfLength, -halfWidth},
+                { halfLength, -halfWidth},
+                { halfLength,  halfWidth},
+                {-halfLength,  halfWidth}
+        };
+
+        double cos = Math.cos(heading);
+        double sin = Math.sin(heading);
+
+        double[] worldX = new double[4];
+        double[] worldY = new double[4];
+
+        // Rotate and translate corners
+        for (int i = 0; i < 4; i++) {
+            double localX = corners[i][0];
+            double localY = corners[i][1];
+
+            worldX[i] = x + localX * cos - localY * sin;
+            worldY[i] = y + localX * sin + localY * cos;
+        }
+
+        // Connect corners
+        for (int i = 0; i < 4; i++) {
+            int next = (i + 1) % 4;
+
+            panelsField.moveCursor(worldX[i], worldY[i]);
+            panelsField.line(worldX[next], worldY[next]);
+        }
+    }
+
+    /**
      * Draw robot position and heading.
      */
     public static void drawRobot(Pose pose) {
@@ -76,7 +115,13 @@ public class Drawing {
         panelsField.setStyle(robotStyle);
 
         // Robot outline
-        drawCircle(x, y, ROBOT_RADIUS, ROBOT_SEGMENTS);
+        drawRectangle(
+                x,
+                y,
+                ROBOT_WIDTH,
+                ROBOT_LENGTH,
+                heading
+        );
 
         // Robot heading
         double headingX =
@@ -98,7 +143,7 @@ public class Drawing {
         drawCircle(
                 pose.x(),
                 pose.y(),
-                3.0,
+                TARGET_RADIUS,
                 TARGET_SEGMENTS
         );
     }
@@ -110,7 +155,6 @@ public class Drawing {
         panelsField.setStyle(lineStyle);
 
         panelsField.moveCursor(start.x(), start.y());
-
         panelsField.line(end.x(), end.y());
     }
 
