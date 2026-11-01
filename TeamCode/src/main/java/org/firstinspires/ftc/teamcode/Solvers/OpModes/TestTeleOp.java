@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.Solvers.Opmodes;
 
+import com.pedropathing.math.Pose;
+import com.qualcomm.hardware.sparkfun.SparkFunOTOS;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.seattlesolvers.solverslib.gamepad.GamepadEx;
@@ -18,6 +20,8 @@ public class TestTeleOp extends OpMode {
     public static double DRIVE_SPEED = 1.0;
     GamepadEx gm1;
 
+
+
     @Override
     public void init() {
         robot.init(hardwareMap);
@@ -31,7 +35,6 @@ public class TestTeleOp extends OpMode {
 
     @Override
     public void loop() {
-
         // ========================
         // Mecanum Drive
         // ========================
@@ -79,8 +82,8 @@ public class TestTeleOp extends OpMode {
         // Telemetry
         // ========================
 
-        telemetry.addData("ShooterSpeed", shooter.Speed);
-        telemetry.addData("ShooterNear", shooter.Near);
+        telemetry.addData("ShooterSpeed", shooter.speed);
+        telemetry.addData("ShooterNear", shooter.near);
 
         telemetry.addData("Front Left", frontLeftPower);
         telemetry.addData("Front Right", frontRightPower);

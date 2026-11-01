@@ -2,6 +2,8 @@ package org.firstinspires.ftc.teamcode.Solvers.Subsystems;
 
 import com.bylazar.configurables.annotations.Configurable;
 import com.seattlesolvers.solverslib.command.SubsystemBase;
+import com.seattlesolvers.solverslib.util.LUT;
+
 import org.firstinspires.ftc.teamcode.Globals.Constants;
 import org.firstinspires.ftc.teamcode.Globals.Robot;
 import dev.nextftc.control.ControlSystem;
@@ -10,15 +12,35 @@ import dev.nextftc.control.feedback.PIDCoefficients;
 import dev.nextftc.control.feedforward.BasicFeedforwardParameters;
 @Configurable
 public class Launcher extends SubsystemBase {
+    public static LUT<Double, Double> distanceToVelLUT = new LUT<Double, Double>()
+    {{
+        add(0.0, 1.0);
+        add(3.0, 5.0);
+        add(5.0, 8.0);
+    }};
+
+    public static LUT<Double, Double> distanceToAngleLUT = new LUT<Double, Double>()
+    {{
+        add(0.0, 0.0);
+        add(3.0, 0.1);
+        add(5.0, 0.2);
+    }};
+
     public static PIDCoefficients testPid = new PIDCoefficients(0.01, 0, 0);
     public static BasicFeedforwardParameters timeUnit = new BasicFeedforwardParameters(0.00032, 0,  0.09);
     ControlSystem spinner = ControlSystem.builder().velPid(testPid).basicFF(timeUnit).build();
     private final Robot robot = Robot.getInstance();
 
-    public boolean Near = false;
-    public static double ServoPos = 0.65;
-    public static double Speed = 1500;
-
+    public boolean near = false;
+    public static double servoPos = 0.65;
+    public static double speed = 1500;
+    public double goalDistance = 0.0;
+    
+    // Manual
+    public static double minimumHood = 0.0;
+    public static boolean manualTuning = false;
+    public static double manualSpeed = 0.0;
+    public static double manualHood = 0.0;
 
     private void setGoal(double speed) {
         spinner.setGoal(new KineticState(0,Math.min(speed, Constants.LAUNCHER_MAX_VELOCITY)));
@@ -27,27 +49,30 @@ public class Launcher extends SubsystemBase {
         double output = spinner.calculate(new KineticState(0, robot.launchEncoder.getCorrectedVelocity()));
         robot.launchMotor.set(output);
     }
-
-    public void startShooter(double speed) {
-        ServoPos = 0.65;
-        this.Speed = speed;
-        setGoal(-speed);
-    }
-
     public void updateShooter() {
         update();
-        robot.hoodServo.set(ServoPos);
-        if (Math.abs(robot.launchMotor.getCorrectedVelocity() - Math.min(this.Speed, Constants.LAUNCHER_MAX_VELOCITY)) <= 0.25) {
-            System.out.println("NEARRRRRR");
-            this.Near = true;
+        robot.hoodServo.set(servoPos);
+        if (Math.abs(robot.launchMotor.getCorrectedVelocity() - Math.min(this.speed, Constants.LAUNCHER_MAX_VELOCITY)) <= 0.25) {
+            System.out.println("nearRRRRR");
+            this.near = true;
         }
         else {
-            this.Near = false;
+            this.near = false;
         }
     }
     @Override
     public void periodic(){
-        setGoal(-Speed);
+        goalDistance = robot.getGoalDistance();
+        if (!manualTuning) {
+            servoPos = distanceToAngleLUT.get(goalDistance);
+            speed = distanceToVelLUT.get(goalDistance);
+        }
+        else {
+            servoPos = manualHood;
+            speed = manualSpeed;
+        }
+        servoPos += minimumHood;
+        setGoal(-speed);
         updateShooter();
     }
 }

@@ -77,7 +77,7 @@ public class Turret extends SubsystemBase {
 
         double robotHeading = Math.toDegrees(robotPose.heading());
         double tt = fieldAngle - robotHeading + HIVE_OFFSET;
-        if(Launcher.ServoPos>0.72)
+        if(Launcher.servoPos>0.72)
             tt+=180;
         return -normalizeAngle(tt);
     }
