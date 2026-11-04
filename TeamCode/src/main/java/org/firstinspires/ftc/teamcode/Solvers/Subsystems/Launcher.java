@@ -326,9 +326,9 @@ public class Launcher extends SubsystemBase {
     // NORMAL VELOCITY CONTROL
     // ==========================================
 
-    public void setGoal(double targetSpeed) {
+    /*public void setGoal(double targetSpeed) {
         setGoal(targetSpeed, 0);
-    }
+    }*/
 
     public void setGoal(
             double targetSpeed,
@@ -343,10 +343,7 @@ public class Launcher extends SubsystemBase {
         // Preserve original negative velocity convention.
         double signedVelocity = -clampedSpeed;
 
-        double signedAcceleration =
-                targetSpeed == 0
-                        ? 0
-                        : -targetAcceleration;
+        double signedAcceleration = targetSpeed == 0 ? 0 : -targetAcceleration;
 
         spinner.setGoal(
                 new KineticState(
