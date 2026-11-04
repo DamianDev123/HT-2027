@@ -24,10 +24,9 @@ public class TestTeleOp extends OpMode {
 
     @Override
     public void init() {
-        robot.init(hardwareMap);
+        robot.init(hardwareMap,telemetry);
 
         gm1 = new GamepadEx(gamepad1);
-        robot.launcher.startShooter(1000);
 
         telemetry.addData("Status", "Initialized");
 
@@ -35,60 +34,8 @@ public class TestTeleOp extends OpMode {
 
     @Override
     public void loop() {
-        // ========================
-        // Mecanum Drive
-        // ========================
 
-        double y = -gamepad1.left_stick_y;
-        double x = gamepad1.left_stick_x;
-        double rx = gamepad1.right_stick_x;
-
-        // Mecanum wheel powers
-        double frontLeftPower = y + x + rx;
-        double backLeftPower = y - x + rx;
-        double frontRightPower = y - x - rx;
-        double backRightPower = y + x - rx;
-
-        // Normalize powers to prevent exceeding 1.0
-        double denominator = Math.max(
-                Math.abs(y) + Math.abs(x) + Math.abs(rx),
-                1.0
-        );
-
-        frontLeftPower /= denominator;
-        backLeftPower /= denominator;
-        frontRightPower /= denominator;
-        backRightPower /= denominator;
-
-        // Apply drive speed multiplier
-        robot.frontLeft.set(frontLeftPower * DRIVE_SPEED);
-        robot.backLeft.set(backLeftPower * DRIVE_SPEED);
-        robot.frontRight.set(frontRightPower * DRIVE_SPEED);
-        robot.backRight.set(backRightPower * DRIVE_SPEED);
-
-        // ========================
-        // Shooter
-        // ========================
-
-        robot.launcher.updateShooter();
-        robot.launcher.startShooter(speed);
-
-        // ========================
-        // Intake
-        // ========================
-        if(gm1.getTrigger(GamepadKeys.Trigger.RIGHT_TRIGGER)>0.4) robot.schedule(robot.storage.Intake);
-
-        // ========================
-        // Telemetry
-        // ========================
-
-        telemetry.addData("ShooterSpeed", shooter.speed);
-        telemetry.addData("ShooterNear", shooter.near);
-
-        telemetry.addData("Front Left", frontLeftPower);
-        telemetry.addData("Front Right", frontRightPower);
-        telemetry.addData("Back Left", backLeftPower);
-        telemetry.addData("Back Right", backRightPower);
+        telemetry.addData("Front Left", robot.breakBeam1.getState());
         telemetry.update();
         robot.updateLoop();
     }

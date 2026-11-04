@@ -2,123 +2,453 @@
 package org.firstinspires.ftc.teamcode.Solvers.Subsystems;
 
 import com.bylazar.configurables.annotations.Configurable;
-import com.pedropathing.follower.Follower;
 import com.pedropathing.math.Pose;
-import com.pedropathing.math.Velocity;
 import com.seattlesolvers.solverslib.command.SubsystemBase;
 
 import org.firstinspires.ftc.teamcode.Globals.Robot;
-import org.firstinspires.ftc.teamcode.helpers.PoseFilter;
 
 @Configurable
 public class ShootingWhileMoving extends SubsystemBase {
 
     private final Robot robot = Robot.getInstance();
 
-    Follower follower;
-    PoseFilter velFilter;
-    PoseFilter accelFilter;
+    // ---------------- CONFIGURATION ----------------
 
-    private Pose previousVelocity;
-    private long previousTime;
+    // Velocity and acceleration low-pass filters
+    public static double velocityFilterAlpha = 0.35;
+    public static double accelerationFilterAlpha = 0.20;
 
-    public static double offset = 0.4;
-    public static double epsilonStopH = 15;
+    // Deadbands
+    public static double VELOCITY_DEADBAND = 0.5;
+    public static double ANGULAR_VELOCITY_DEADBAND = 200000.0;
+    public static double ACCELERATION_DEADBAND = 20.0;
 
-    public static double accelScale = 1.0;
+    // Time of flight approximation
+    public static double TOF_SLOPE = 0.012;
+    public static double TOF_OFFSET = 0.2;
+    public static double MAX_TOF = 0.7;
+    public static double MIN_TOF = 0.0;
 
-    public ShootingWhileMoving() {
-        velFilter = new PoseFilter(9);
-        accelFilter = new PoseFilter(7);
+    // Wheel speed calibration
+    public static double WHEEL_SPEED_SLOPE = 9.1070;
+    public static double WHEEL_SPEED_OFFSET =1122.97115;
 
-        follower = robot.follower;
+    // Sampling interval
+    public static double SAMPLING_DT = 0.02;
 
-        previousTime = System.nanoTime();
+    // Additional turret offset, in radians
+    public static double turretOffset = 0.0;
+
+    // ---------------- MOTION ESTIMATION ----------------
+
+    private double filteredVx = 0;
+    private double filteredVy = 0;
+    private double filteredOmega = 0;
+
+    private double filteredAx = 0;
+    private double filteredAy = 0;
+
+    private double previousVx = 0;
+    private double previousVy = 0;
+
+    private long previousTime = 0;
+
+    private boolean motionInitialized = false;
+
+    // ---------------- SHOT SOLUTION ----------------
+
+    public static class ShotSolution {
+
+        public final double distance;
+        public final double tof;
+
+        public final double turretAngle;
+        public final double turretAngularVelocity;
+
+        public final double distanceRate;
+
+        public final double wheelSpeed;
+        public final double wheelAcceleration;
+
+        public final double robotVelocityX;
+        public final double robotVelocityY;
+
+        public final double robotAccelerationX;
+        public final double robotAccelerationY;
+
+        public final double predictedHeading;
+
+        public ShotSolution(
+                double distance,
+                double tof,
+                double turretAngle,
+                double turretAngularVelocity,
+                double distanceRate,
+                double wheelSpeed,
+                double wheelAcceleration,
+                double robotVelocityX,
+                double robotVelocityY,
+                double robotAccelerationX,
+                double robotAccelerationY,
+                double predictedHeading
+        ) {
+
+            this.distance = distance;
+            this.tof = tof;
+
+            this.turretAngle = turretAngle;
+            this.turretAngularVelocity = turretAngularVelocity;
+
+            this.distanceRate = distanceRate;
+
+            this.wheelSpeed = wheelSpeed;
+            this.wheelAcceleration = wheelAcceleration;
+
+            this.robotVelocityX = robotVelocityX;
+            this.robotVelocityY = robotVelocityY;
+
+            this.robotAccelerationX = robotAccelerationX;
+            this.robotAccelerationY = robotAccelerationY;
+
+            this.predictedHeading = predictedHeading;
+        }
     }
 
-    private void updateFilteredVelocities() {
-        Velocity velocity = follower.velocity();
+    // ---------------- HELPERS ----------------
 
-        Pose currentVelocity = new Pose(
-                velocity.vx,
-                velocity.vy,
-                velocity.omega
+    private double clamp(double value, double min, double max) {
+        return Math.max(min, Math.min(value, max));
+    }
+
+    private double lerp(double current, double target, double alpha) {
+        return current + alpha * (target - current);
+    }
+
+    public double getFlyTime(double distance) {
+
+        return clamp(
+                TOF_SLOPE * distance + TOF_OFFSET,
+                MIN_TOF,
+                MAX_TOF
+        );
+    }
+
+    private double getWheelSpeed(double distance) {
+
+        return WHEEL_SPEED_SLOPE * distance
+                + WHEEL_SPEED_OFFSET;
+    }
+
+    private double sampleRate(
+            double distance,
+            double distanceRate
+    ) {
+
+        double currentSpeed = getWheelSpeed(distance);
+
+        double futureSpeed = getWheelSpeed(
+                distance + distanceRate * SAMPLING_DT
         );
 
-        velFilter.updateFilteredPose(currentVelocity);
-
-        // Calculate acceleration using velocity change over time
-        long currentTime = System.nanoTime();
-
-        double dt = (currentTime - previousTime) / 1e9;
-
-        if (previousVelocity != null && dt > 0) {
-
-            Pose acceleration = new Pose(
-                    (currentVelocity.x() - previousVelocity.x()) / dt,
-                    (currentVelocity.y() - previousVelocity.y()) / dt,
-                    (currentVelocity.heading() - previousVelocity.heading()) / dt
-            );
-
-            accelFilter.updateFilteredPose(acceleration);
-        }
-
-        previousVelocity = currentVelocity;
-        previousTime = currentTime;
+        return (futureSpeed - currentSpeed) / SAMPLING_DT;
     }
 
-    public boolean isMoving() {
-        double mag = follower.velocity().toVector().magnitude();
+    // ---------------- MOTION UPDATE ----------------
 
-        robot.telemetry.addData("abs", mag);
+    /**
+     * Call once per robot loop, after follower.update().
+     */
+    public void updateMotionEstimate() {
 
-        return mag > epsilonStopH;
+        if (robot.follower == null) {
+            return;
+        }
+
+        double measuredVx = robot.follower.velocity().vx;
+        double measuredVy = robot.follower.velocity().vy;
+        double measuredOmega = robot.follower.velocity().omega;
+
+        long now = System.nanoTime();
+
+        // Initialize motion estimation
+        if (!motionInitialized) {
+
+            filteredVx = measuredVx;
+            filteredVy = measuredVy;
+            filteredOmega = measuredOmega;
+
+            previousVx = measuredVx;
+            previousVy = measuredVy;
+
+            previousTime = now;
+
+            motionInitialized = true;
+
+            return;
+        }
+
+        double dt = (now - previousTime) / 1e9;
+
+        // Reject invalid time intervals
+        if (dt <= 0 || dt > 0.2) {
+
+            previousTime = now;
+
+            previousVx = filteredVx;
+            previousVy = filteredVy;
+
+            return;
+        }
+
+        // ---------------- FILTER VELOCITY ----------------
+
+        filteredVx = lerp(
+                filteredVx,
+                measuredVx,
+                velocityFilterAlpha
+        );
+
+        filteredVy = lerp(
+                filteredVy,
+                measuredVy,
+                velocityFilterAlpha
+        );
+
+        filteredOmega = lerp(
+                filteredOmega,
+                measuredOmega,
+                velocityFilterAlpha
+        );
+
+        // ---------------- STATIONARY DETECTION ----------------
+
+        double speed = Math.hypot(
+                filteredVx,
+                filteredVy
+        );
+
+        if (speed < VELOCITY_DEADBAND) {
+
+            filteredVx = 0;
+            filteredVy = 0;
+
+            filteredAx = 0;
+            filteredAy = 0;
+
+            previousVx = 0;
+            previousVy = 0;
+
+            // Stop angular velocity noise too
+            if (Math.abs(filteredOmega) < ANGULAR_VELOCITY_DEADBAND) {
+                filteredOmega = 0;
+            }
+
+            previousTime = now;
+
+            return;
+        }
+
+        // ---------------- CALCULATE ACCELERATION ----------------
+
+        double measuredAx =
+                (filteredVx - previousVx) / dt;
+
+        double measuredAy =
+                (filteredVy - previousVy) / dt;
+
+        // ---------------- FILTER ACCELERATION ----------------
+
+        filteredAx = lerp(
+                filteredAx,
+                measuredAx,
+                accelerationFilterAlpha
+        );
+
+        filteredAy = lerp(
+                filteredAy,
+                measuredAy,
+                accelerationFilterAlpha
+        );
+
+        // ---------------- ACCELERATION DEADBAND ----------------
+
+        if (Math.abs(filteredAx) < ACCELERATION_DEADBAND) {
+            filteredAx = 0;
+        }
+
+        if (Math.abs(filteredAy) < ACCELERATION_DEADBAND) {
+            filteredAy = 0;
+        }
+
+        // ---------------- ANGULAR VELOCITY DEADBAND ----------------
+
+        if (Math.abs(filteredOmega) < ANGULAR_VELOCITY_DEADBAND) {
+            filteredOmega = 0;
+        }
+
+        // ---------------- SAVE PREVIOUS VALUES ----------------
+
+        previousVx = filteredVx;
+        previousVy = filteredVy;
+
+        previousTime = now;
     }
 
-    public Pose getExpectedPose(Pose pose) {
+    // ---------------- PREDICTED POSE ----------------
 
-        Pose velocity = velFilter.filteredPose;
-        Pose acceleration = accelFilter.filteredPose;
+    public Pose getExpectedPose(Pose currentPose) {
 
-        if (!isMoving()) {
-            velocity = new Pose(0, 0, 0);
-            acceleration = new Pose(0, 0, 0);
+        if (!motionInitialized) {
+            return currentPose;
         }
+
+        double distance = Math.hypot(
+                robot.getHive().x() - currentPose.x(),
+                robot.getHive().y() - currentPose.y()
+        );
+
+        double tof = getFlyTime(distance);
+
+        double futureX =
+                currentPose.x()
+                        + filteredVx * tof
+                        + 0.5 * filteredAx * tof * tof;
+
+        double futureY =
+                currentPose.y()
+                        + filteredVy * tof
+                        + 0.5 * filteredAy * tof * tof;
+
+        double futureHeading =
+                currentPose.heading() + filteredOmega * tof;
+
+        return new Pose(
+                futureX,
+                futureY,
+                futureHeading
+        );
+    }
+
+    // ---------------- SHOT CALCULATION ----------------
+
+    public ShotSolution calculate(Pose turretPose) {
 
         Pose goal = robot.getHive();
 
-        double dx = goal.x() - pose.x();
-        double dy = goal.y() - pose.y();
+        // Current filtered robot motion
+        double vx = filteredVx;
+        double vy = filteredVy;
+        double omega = filteredOmega;
 
-        double distance = Math.sqrt(dx * dx + dy * dy);
+        double ax = filteredAx;
+        double ay = filteredAy;
 
-        double flyTime = getFlyTime(distance);
+        // ---------------- TIME OF FLIGHT ----------------
 
-        // Velocity compensation
-        double predictedX = velocity.x() * flyTime;
-        double predictedY = velocity.y() * flyTime;
+        double initialDistance = Math.hypot(
+                goal.x() - turretPose.x(),
+                goal.y() - turretPose.y()
+        );
 
-        // Acceleration compensation
-        double accelX = 0.5 * acceleration.x()
-                * flyTime * flyTime * accelScale;
+        double tof = getFlyTime(initialDistance);
 
-        double accelY = 0.5 * acceleration.y()
-                * flyTime * flyTime * accelScale;
+        // ---------------- PREDICT FUTURE POSITION ----------------
 
-        // Predict robot position when projectile reaches target
-        return new Pose(
-                pose.x() - predictedX - accelX,
-                pose.y() - predictedY - accelY,
-                pose.heading()
+        double futureX =
+                turretPose.x()
+                        + vx * tof
+                        + 0.5 * ax * tof * tof;
+
+        double futureY =
+                turretPose.y()
+                        + vy * tof
+                        + 0.5 * ay * tof * tof;
+
+        double futureHeading =
+                turretPose.heading() + omega * tof;
+
+        double dx = goal.x() - futureX;
+        double dy = goal.y() - futureY;
+
+        double r2 = dx * dx + dy * dy;
+
+        double distance = Math.sqrt(r2);
+
+        if (distance < 1e-6) {
+            distance = 1e-6;
+        }
+
+        // ---------------- TURRET ANGLE ----------------
+
+        double fieldAngle = Math.atan2(dy, dx);
+
+        double hiveOffset = robot.hiveIndex == 0
+                ? Math.toRadians(Turret.HIVE_OFFSET)
+                : -Math.toRadians(Turret.HIVE_OFFSET);
+
+        if (Launcher.servoPos > 0.72) {
+            hiveOffset += Math.PI;
+        }
+
+        double wantedTurretAngle =
+                -(fieldAngle - futureHeading + hiveOffset)
+                        + turretOffset;
+
+        // ---------------- TURRET ANGULAR VELOCITY ----------------
+
+        double lineOfSightRate =
+                (dy * vx - dx * vy) / r2;
+
+        double wantedTurretVelocity =
+                omega - lineOfSightRate;
+
+        // ---------------- DISTANCE RATE ----------------
+
+        double distanceRate =
+                (dx * vx + dy * vy) / distance;
+
+        // ---------------- FLYWHEEL ----------------
+
+        double wantedWheelSpeed = getWheelSpeed(distance);
+
+        double wantedWheelAcceleration = sampleRate(
+                distance,
+                distanceRate
+        );
+
+        // ---------------- RETURN ----------------
+
+        return new ShotSolution(
+                distance,
+                tof,
+                Math.toDegrees(wantedTurretAngle),
+                wantedTurretVelocity,
+                distanceRate,
+                wantedWheelSpeed,
+                wantedWheelAcceleration,
+                vx,
+                vy,
+                ax,
+                ay,
+                futureHeading
         );
     }
 
-    public double getFlyTime(double x) {
-        return 0.00513606 * x + 0.459651 + offset;
-    }
+    // ---------------- TELEMETRY ----------------
 
-    @Override
-    public void periodic() {
-        updateFilteredVelocities();
+    public void addTelemetry() {
+
+        robot.telemetry.addData("SOTM Vx", filteredVx);
+        robot.telemetry.addData("SOTM Vy", filteredVy);
+
+        robot.telemetry.addData("SOTM Ax", filteredAx);
+        robot.telemetry.addData("SOTM Ay", filteredAy);
+
+        robot.telemetry.addData("SOTM Omega", filteredOmega);
+
+        robot.telemetry.addData(
+                "SOTM Speed",
+                Math.hypot(filteredVx, filteredVy)
+        );
     }
 }

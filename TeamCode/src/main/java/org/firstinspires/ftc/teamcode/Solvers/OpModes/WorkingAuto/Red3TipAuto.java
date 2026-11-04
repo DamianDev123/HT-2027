@@ -14,7 +14,7 @@ public class Red3TipAuto extends OpMode {
     private final Robot robot = Robot.getInstance();
     @Override
     public void init() {
-        robot.init(hardwareMap);
+        robot.init(hardwareMap,telemetry);
         follower = robot.follower;
         robot.schedule(
                 new SequentialCommandGroup(

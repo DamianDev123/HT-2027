@@ -25,16 +25,28 @@ public class Storage extends SubsystemBase {
     BooleanSupplier notIntaking = () -> !intaking;
 
     public InstantCommand Intake = new InstantCommand(() -> {
-        if(!full)
-            robot.transferMotor.set(-1);
         robot.intakeMotor.set(-1);
+//        if(!full)
+//            robot.transferMotor.set(-0.5);
         intaking = true;
     });
 
     public InstantCommand Outake = new InstantCommand(() -> {
-        robot.transferMotor.set(0);
         robot.intakeMotor.set(0);
+        if(!shooting)
+            robot.transferMotor.set(0);
         intaking = false;
+    });
+    public InstantCommand IntakeT = new InstantCommand(() -> {
+        robot.transferMotor.set(-1);
+        full = false;
+        shooting = true; // Reset shooting state when stopping
+
+    });
+
+    public InstantCommand OutakeT = new InstantCommand(() -> {
+        if(!intaking)
+            robot.transferMotor.set(0);
         shooting = false; // Reset shooting state when stopping
     });
 
@@ -59,7 +71,7 @@ public class Storage extends SubsystemBase {
     @Override
     public void periodic() {
         // Only update 'full' from the break beam if we are NOT currently shooting
-        if (!shooting && transfer.getState()) {
+        if (!shooting && !transfer.getState()) {
             full = true;
         }
     }
