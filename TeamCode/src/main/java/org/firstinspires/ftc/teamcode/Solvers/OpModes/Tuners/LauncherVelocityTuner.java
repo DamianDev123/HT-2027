@@ -3,6 +3,8 @@ package org.firstinspires.ftc.teamcode.Solvers.Opmodes.Tuners;
 import com.bylazar.configurables.annotations.Configurable;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.seattlesolvers.solverslib.gamepad.GamepadEx;
+import com.seattlesolvers.solverslib.gamepad.GamepadKeys;
 
 import org.firstinspires.ftc.teamcode.Globals.Robot;
 import org.firstinspires.ftc.teamcode.Solvers.Subsystems.Launcher;
@@ -43,13 +45,13 @@ public class LauncherVelocityTuner extends OpMode {
     private boolean calibrationComplete = false;
 
     private final Robot robot = Robot.getInstance();
-
+    GamepadEx gm1;
     // ---------------- INITIALIZATION ----------------
 
     @Override
     public void init() {
         robot.init(hardwareMap, telemetry);
-
+        gm1 = new GamepadEx(gamepad1);
         initializeMotorSpeeds();
 
         Launcher.manual = false;
@@ -84,6 +86,10 @@ public class LauncherVelocityTuner extends OpMode {
             telemetry.update();
             return;
         }
+        if(gm1.getTrigger(GamepadKeys.Trigger.RIGHT_TRIGGER)>0.4) robot.schedule(robot.storage.Intake);
+        if(gm1.getTrigger(GamepadKeys.Trigger.RIGHT_TRIGGER)<0.4) robot.schedule(robot.storage.Outake);
+        if(gm1.getTrigger(GamepadKeys.Trigger.LEFT_TRIGGER)>0.4) robot.schedule(robot.storage.IntakeT);
+        if(gm1.getTrigger(GamepadKeys.Trigger.LEFT_TRIGGER)<0.4) robot.schedule(robot.storage.OutakeT);
 
         // Run the normal robot loop.
         // This also updates the launcher through the scheduler.
@@ -93,9 +99,14 @@ public class LauncherVelocityTuner extends OpMode {
         disableTurret();
 
         // Detect a new A button press.
-        boolean currentA = gamepad1.a;
+        boolean currentA = gm1.getButton(GamepadKeys.Button.A);
+
+        telemetry.addData("A Button", currentA);
+        telemetry.addData("Last A", lastA);
+        telemetry.addData("Measured Range", measuredRange);
 
         if (currentA && !lastA) {
+            telemetry.addLine("A PRESSED");
             submitMeasurement();
         }
 
@@ -213,10 +224,7 @@ public class LauncherVelocityTuner extends OpMode {
             return;
         }
 
-        double exitVelocity = calculateExitVelocity(
-                measuredRange,
-                SHOOTER_HEIGHT
-        );
+        double exitVelocity = measuredRange;
 
         if (exitVelocity <= 0 ||
                 Double.isNaN(exitVelocity) ||

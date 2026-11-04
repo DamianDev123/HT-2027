@@ -1,4 +1,3 @@
-
 package org.firstinspires.ftc.teamcode.Solvers.Subsystems;
 
 import com.bylazar.configurables.annotations.Configurable;
@@ -43,9 +42,7 @@ public class Launcher extends SubsystemBase {
     // ==========================================
 
     public static double maxPower = 1.0;
-
     public static double bangBangThreshold = 50;
-
     public static double velocityTolerance = 30;
 
     // ==========================================
@@ -53,15 +50,11 @@ public class Launcher extends SubsystemBase {
     // ==========================================
 
     public static double servoPos = 0.65;
-
     public static double speed = 1500;
-
     public static double goalDistance = 0;
-
     public static double manualSpeed = 1500;
 
     public static boolean manual = false;
-
     public static boolean enabled = true;
 
     public static double hoodMinimum = 0.0;
@@ -70,22 +63,22 @@ public class Launcher extends SubsystemBase {
     // PROJECTILE PHYSICS
     // ==========================================
 
-    // Hive target height above ground (inches).
-    public static double hiveHeight = 50.0;
+    // Pollen lands on the floor.
+    public static double hiveHeight = 0.0;
 
-    // Shooter exit height above ground (inches).
-    public static double shooterHeight = 8.0;
+    // Shooter exit height above the floor.
+    public static double shooterHeight = 6.0;
 
-    // Shooting angle relative to horizontal (degrees).
-    public static double shootingAngle = -15.0;
+    // Positive means shooting upward.
+    public static double shootingAngle = 15.0;
 
     // Gravity in inches per second squared.
     public static double gravity = 386.09;
 
-    // Calculated projectile exit velocity (inches/second).
+    // Calculated projectile exit velocity.
     public static double exitVelocity = 0;
 
-    // Calculated projectile flight time (seconds).
+    // Calculated projectile flight time.
     public static double flightTime = 0;
 
     // ==========================================
@@ -93,7 +86,7 @@ public class Launcher extends SubsystemBase {
     // ==========================================
 
     /*
-     * Calibration equation:
+     * Relationship:
      *
      * exitVelocity = calibrationSlope * motorSpeed
      *                + calibrationIntercept
@@ -103,12 +96,11 @@ public class Launcher extends SubsystemBase {
      * motorSpeed = (exitVelocity - calibrationIntercept)
      *              / calibrationSlope
      *
-     * Replace these values with the results from
-     * your 10-speed Pollen calibration.
+     * Enter the coefficients calculated from your
+     * Pollen calibration measurements.
      */
 
     public static double calibrationSlope = 0.0;
-
     public static double calibrationIntercept = 0.0;
 
     // ==========================================
@@ -118,9 +110,7 @@ public class Launcher extends SubsystemBase {
     private boolean shotOnMove = false;
 
     private double shotSpeed = 0;
-
     private double shotAcceleration = 0;
-
     private double shotHood = 0.65;
 
     // ==========================================
@@ -128,7 +118,6 @@ public class Launcher extends SubsystemBase {
     // ==========================================
 
     private boolean bangBangActive = false;
-
     private double motorOutput = 0;
 
     // ==========================================
@@ -145,17 +134,14 @@ public class Launcher extends SubsystemBase {
 
     /**
      * Calculates the required initial Pollen velocity
-     * to reach the hive.
+     * to reach the floor at the specified horizontal distance.
      *
      * All distances are inches.
      * Returned velocity is inches per second.
      *
-     * Uses:
-     *
-     * v = sqrt(
-     *     g * d^2 /
-     *     (2 * cos(theta)^2 * (d * tan(theta) - deltaY))
-     * )
+     * Assumes:
+     * - Shooter launches upward.
+     * - Pollen lands at floor level.
      */
 
     public double calculateExitVelocity(double distance) {
@@ -190,12 +176,8 @@ public class Launcher extends SubsystemBase {
     // ==========================================
 
     /**
-     * Calculates the time needed for the Pollen
-     * to travel the horizontal distance.
-     *
-     * Distance: inches
-     * Exit velocity: inches/second
-     * Return: seconds
+     * Calculates flight time from horizontal distance
+     * and initial projectile velocity.
      */
 
     public double calculateFlightTime(
@@ -237,29 +219,102 @@ public class Launcher extends SubsystemBase {
 
     /**
      * Converts projectile exit velocity into the
-     * required launcher motor velocity using the
-     * calibration equation.
+     * required launcher motor velocity.
      *
-     * Returns 0 if calibration has not been entered.
+     * Uses the linear calibration from your
+     * Pollen calibration tuner.
      */
 
     public double calculateMotorSpeed(double targetExitVelocity) {
 
-        if (calibrationSlope == 0 ||
-                Double.isNaN(calibrationSlope) ||
-                Double.isInfinite(calibrationSlope)) {
+        // ======================================
+        // PROJECTILE SETTINGS
+        // ======================================
+
+        double angle = Math.toRadians(shootingAngle);
+
+        // ======================================
+        // CALCULATE EQUIVALENT FLOOR DISTANCE
+        // ======================================
+
+        // Vertical projectile equation:
+        // 0 = shooterHeight + vY*t - (g*t^2)/2
+
+        double verticalVelocity =
+                targetExitVelocity * Math.sin(angle);
+
+        double discriminant =
+                verticalVelocity * verticalVelocity
+                        + 2.0 * gravity * shooterHeight;
+
+        if (targetExitVelocity <= 0 ||
+                discriminant < 0 ||
+                Double.isNaN(discriminant) ||
+                Double.isInfinite(discriminant)) {
+            return 0;
+        }
+
+        double flightTime =
+                (verticalVelocity + Math.sqrt(discriminant))
+                        / gravity;
+
+        // Horizontal distance traveled before landing.
+        double floorDistance =
+                targetExitVelocity * Math.cos(angle) * flightTime;
+
+        if (floorDistance <= 0 ||
+                Double.isNaN(floorDistance) ||
+                Double.isInfinite(floorDistance)) {
+            return 0;
+        }
+
+        // ======================================
+        // INVERT YOUR QUADRATIC CALIBRATION
+        // ======================================
+
+        // d = a*S^2 + b*S + c
+
+        double a = 0.0000012987;
+        double b = 0.0887706;
+        double c = -59.1645;
+
+        double quadraticDiscriminant =
+                b * b - 4.0 * a * (c - floorDistance);
+
+        if (quadraticDiscriminant < 0 ||
+                Double.isNaN(quadraticDiscriminant) ||
+                Double.isInfinite(quadraticDiscriminant)) {
             return 0;
         }
 
         double motorSpeed =
-                (targetExitVelocity - calibrationIntercept)
-                        / calibrationSlope;
+                (-b + Math.sqrt(quadraticDiscriminant))
+                        / (2.0 * a);
 
         if (motorSpeed <= 0 ||
                 Double.isNaN(motorSpeed) ||
                 Double.isInfinite(motorSpeed)) {
             return 0;
         }
+
+        // ======================================
+        // TELEMETRY
+        // ======================================
+
+        robot.telemetry.addData(
+                "Target Exit Velocity",
+                targetExitVelocity
+        );
+
+        robot.telemetry.addData(
+                "Equivalent Floor Distance",
+                floorDistance
+        );
+
+        robot.telemetry.addData(
+                "Calculated Motor Speed",
+                motorSpeed
+        );
 
         return Math.min(
                 motorSpeed,
@@ -285,7 +340,7 @@ public class Launcher extends SubsystemBase {
                 Constants.LAUNCHER_MAX_VELOCITY
         );
 
-        // Original negative velocity convention.
+        // Preserve original negative velocity convention.
         double signedVelocity = -clampedSpeed;
 
         double signedAcceleration =
@@ -362,7 +417,7 @@ public class Launcher extends SubsystemBase {
 
     public void update() {
 
-        // Preserve your working encoder convention.
+        // Preserve original encoder convention.
         double currentVelocity =
                 -robot.launchEncoder.getCorrectedVelocity();
 
@@ -458,11 +513,21 @@ public class Launcher extends SubsystemBase {
             return;
         }
 
+        // ======================================
+        // MANUAL MODE
+        // ======================================
+
         if (manual) {
 
             setGoal(manualSpeed, 0);
 
-        } else if (shotOnMove) {
+        }
+
+        // ======================================
+        // SHOOTING WHILE MOVING
+        // ======================================
+
+        else if (shotOnMove) {
 
             setGoal(
                     shotSpeed,
@@ -471,22 +536,25 @@ public class Launcher extends SubsystemBase {
 
             servoPos = shotHood;
 
-        } else {
+        }
 
-            // ==================================
-            // PHYSICS-BASED DISTANCE SHOOTING
-            // ==================================
+        // ======================================
+        // PHYSICS-BASED DISTANCE SHOOTING
+        // ======================================
+
+        else {
 
             goalDistance = robot.getGoalDistance();
 
             // Calculate required Pollen exit velocity.
             exitVelocity = calculateExitVelocity(goalDistance);
 
-            // Calculate estimated flight time.
+            // Calculate estimated projectile flight time.
             flightTime = calculateFlightTime(
                     goalDistance,
                     exitVelocity
             );
+            robot.telemetry.addData("TargetExit",exitVelocity);
 
             // Convert projectile velocity into motor velocity.
             speed = calculateMotorSpeed(exitVelocity);
@@ -494,8 +562,11 @@ public class Launcher extends SubsystemBase {
             // Only command the launcher if calibration
             // coefficients have been entered.
             if (speed > 0) {
+
                 setGoal(speed, 0);
+
             } else {
+
                 setGoal(0, 0);
             }
         }
@@ -547,7 +618,7 @@ public class Launcher extends SubsystemBase {
         );
 
         robot.telemetry.addData(
-                "Launcher Distance",
+                "Launcher Distance (in)",
                 goalDistance
         );
 
@@ -572,6 +643,16 @@ public class Launcher extends SubsystemBase {
         );
 
         robot.telemetry.addData(
+                "Calibration Slope",
+                calibrationSlope
+        );
+
+        robot.telemetry.addData(
+                "Calibration Intercept",
+                calibrationIntercept
+        );
+
+        robot.telemetry.addData(
                 "Hive Height (in)",
                 hiveHeight
         );
@@ -582,7 +663,7 @@ public class Launcher extends SubsystemBase {
         );
 
         robot.telemetry.addData(
-                "Shooting Angle",
+                "Shooting Angle (degrees)",
                 shootingAngle
         );
 
