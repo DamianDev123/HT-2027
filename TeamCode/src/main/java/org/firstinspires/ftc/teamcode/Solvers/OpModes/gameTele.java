@@ -31,7 +31,7 @@ public class gameTele extends OpMode {
         if(gm1.getTrigger(GamepadKeys.Trigger.RIGHT_TRIGGER)<0.4) robot.schedule(robot.storage.Outake);
         if(gm1.getTrigger(GamepadKeys.Trigger.LEFT_TRIGGER)>0.4) robot.schedule(robot.storage.IntakeT);
         if(gm1.getTrigger(GamepadKeys.Trigger.LEFT_TRIGGER)<0.4) robot.schedule(robot.storage.OutakeT);
-
+        gm1.getGamepadButton(GamepadKeys.Button.B).whenReleased(robot.turret.calibrate);
         gm1.getGamepadButton(GamepadKeys.Button.RIGHT_BUMPER).whenPressed(robot.storage.SingularShot);
         double forward = gm1.getLeftY();
         double lateral = -gm1.getLeftX();

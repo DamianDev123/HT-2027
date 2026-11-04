@@ -6,6 +6,7 @@ import com.bylazar.telemetry.PanelsTelemetry;
 import com.pedropathing.math.Pose;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.seattlesolvers.solverslib.command.InstantCommand;
 import com.seattlesolvers.solverslib.command.SubsystemBase;
 
 import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
@@ -17,7 +18,7 @@ import dev.nextftc.control.feedback.PIDCoefficients;
 import dev.nextftc.control.feedforward.BasicFeedforwardParameters;
 
 @Configurable
-public class sTurret extends SubsystemBase {
+public class Turret extends SubsystemBase {
 
     public static PIDCoefficients turretPid =
             new PIDCoefficients(0.01, 0, 0);
@@ -94,7 +95,7 @@ public class sTurret extends SubsystemBase {
 
     // Shot-on-the-move state.
     public boolean shotOnMove = false;
-    public boolean calibrating = true;
+    public boolean calibrating = false;
     public double calibratedOffset = 0.0;
 
     // ==========================================
@@ -149,6 +150,9 @@ public class sTurret extends SubsystemBase {
      * Compensates for the turret pivot being displaced
      * from the robot's localization origin.
      */
+    public final InstantCommand calibrate = new InstantCommand(() ->
+            calibrating = true
+    );
     public double getHiveAngle() {
 
         Pose robotPose = robot.getRawPose();
