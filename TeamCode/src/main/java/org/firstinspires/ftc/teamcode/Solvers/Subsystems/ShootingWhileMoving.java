@@ -3,6 +3,7 @@ package org.firstinspires.ftc.teamcode.Solvers.Subsystems;
 
 import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.math.Pose;
+import com.qualcomm.robotcore.util.ElapsedTime;
 import com.seattlesolvers.solverslib.command.SubsystemBase;
 
 import org.firstinspires.ftc.teamcode.Globals.Robot;
@@ -25,7 +26,7 @@ public class ShootingWhileMoving extends SubsystemBase {
 
 
     // Sampling interval
-    public static double SAMPLING_DT = 0.02;
+    public static double SAMPLING_DT = 0.08;
 
     // Additional turret offset, in radians
     public static double turretOffset = 0.0;
@@ -154,7 +155,7 @@ public class ShootingWhileMoving extends SubsystemBase {
         double measuredVy = robot.follower.velocity().vy;
         double measuredOmega = robot.follower.velocity().omega;
 
-        long now = System.nanoTime();
+        long now = ElapsedTime.MILLIS_IN_NANO;
 
         // Initialize motion estimation
         if (!motionInitialized) {
