@@ -35,7 +35,7 @@ public class Red3TipAuto extends CommandOpMode {
         follower.setPose(paths.getStartPose());
 
         schedule(new SequentialCommandGroup(
-
+                new WaitCommand(2500),
                 // Shoot preload
                 storage.shootCommand(),
                 new WaitCommand(2500),
