@@ -14,7 +14,7 @@ import dev.nextftc.control.feedback.PIDCoefficients;
 import dev.nextftc.control.feedforward.BasicFeedforwardParameters;
 
 @Configurable
-public class Turret extends SubsystemBase {
+public class sTurret extends SubsystemBase {
 
     public static PIDCoefficients turretPid =
             new PIDCoefficients(0.01, 0, 0);
