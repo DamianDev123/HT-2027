@@ -109,11 +109,10 @@ public class Robot extends com.seattlesolvers.solverslib.command.Robot {
 
         hubs = hwMap.getAll(LynxModule.class);
 
-        ex = getExpansionHub(hubs);
-
-        ex.setBulkCachingMode(
-                LynxModule.BulkCachingMode.MANUAL
-        );
+        // Enable MANUAL bulk caching mode for ALL hubs
+        for (LynxModule hub : hubs) {
+            hub.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
+        }
 
         // ---------------- MOTORS ----------------
 
@@ -398,7 +397,9 @@ public class Robot extends com.seattlesolvers.solverslib.command.Robot {
     public void updateLoop() {
 
         // Clear hardware cache
-        ex.clearBulkCache();
+        for (LynxModule hub : hubs) {
+            hub.clearBulkCache();
+        }
 
         // Update PedroPathing first
         follower.update();

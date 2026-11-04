@@ -1,4 +1,3 @@
-
 package org.firstinspires.ftc.teamcode.Solvers.Subsystems;
 
 import com.bylazar.configurables.annotations.Configurable;
@@ -18,7 +17,7 @@ public class Launcher extends SubsystemBase {
     private final Robot robot = Robot.getInstance();
 
     // ==========================================
-    // ORIGINAL PIDF CONFIGURATION
+    // PIDF CONFIGURATION
     // ==========================================
 
     public static PIDCoefficients testPid =
@@ -43,11 +42,7 @@ public class Launcher extends SubsystemBase {
     // ==========================================
 
     public static double maxPower = 1.0;
-
-    // Enter Bang-Bang when below target by this amount.
     public static double bangBangThreshold = 50;
-
-    // Return to PIDF when within this amount.
     public static double velocityTolerance = 30;
 
     // ==========================================
@@ -55,18 +50,58 @@ public class Launcher extends SubsystemBase {
     // ==========================================
 
     public static double servoPos = 0.65;
-
     public static double speed = 1500;
-
     public static double goalDistance = 0;
-
     public static double manualSpeed = 1500;
 
     public static boolean manual = false;
-
     public static boolean enabled = true;
 
     public static double hoodMinimum = 0.0;
+
+    // ==========================================
+    // PROJECTILE PHYSICS
+    // ==========================================
+
+    // Pollen lands on the floor.
+    public static double hiveHeight = 0.0;
+
+    // Shooter exit height above the floor.
+    public static double shooterHeight = 6.0;
+
+    // Positive means shooting upward.
+    public static double shootingAngle = 15.0;
+
+    // Gravity in inches per second squared.
+    public static double gravity = 386.09;
+
+    // Calculated projectile exit velocity.
+    public static double exitVelocity = 0;
+
+    // Calculated projectile flight time.
+    public static double flightTime = 0;
+
+    // ==========================================
+    // EXIT VELOCITY CALIBRATION
+    // ==========================================
+
+    /*
+     * Relationship:
+     *
+     * exitVelocity = calibrationSlope * motorSpeed
+     *                + calibrationIntercept
+     *
+     * Inverse:
+     *
+     * motorSpeed = (exitVelocity - calibrationIntercept)
+     *              / calibrationSlope
+     *
+     * Enter the coefficients calculated from your
+     * Pollen calibration measurements.
+     */
+
+    public static double calibrationSlope = 0.0;
+    public static double calibrationIntercept = 0.0;
 
     // ==========================================
     // SHOOTING WHILE MOVING
@@ -75,9 +110,7 @@ public class Launcher extends SubsystemBase {
     private boolean shotOnMove = false;
 
     private double shotSpeed = 0;
-
     private double shotAcceleration = 0;
-
     private double shotHood = 0.65;
 
     // ==========================================
@@ -85,7 +118,6 @@ public class Launcher extends SubsystemBase {
     // ==========================================
 
     private boolean bangBangActive = false;
-
     private double motorOutput = 0;
 
     // ==========================================
@@ -94,6 +126,200 @@ public class Launcher extends SubsystemBase {
 
     public Launcher() {
         spinner.setGoal(new KineticState(0, 0, 0));
+    }
+
+    // ==========================================
+    // PROJECTILE EXIT VELOCITY
+    // ==========================================
+
+    /**
+     * Calculates the required initial Pollen velocity
+     * to reach the floor at the specified horizontal distance.
+     *
+     * All distances are inches.
+     * Returned velocity is inches per second.
+     *
+     * Assumes:
+     * - Shooter launches upward.
+     * - Pollen lands at floor level.
+     */
+
+    public double calculateExitVelocity(double distance) {
+
+        double angle = Math.toRadians(shootingAngle);
+
+        double deltaY = hiveHeight - shooterHeight;
+
+        double denominator =
+                2.0
+                        * Math.pow(Math.cos(angle), 2)
+                        * (distance * Math.tan(angle) - deltaY);
+
+        if (distance <= 0 || denominator <= 0) {
+            return 0;
+        }
+
+        double velocitySquared =
+                (gravity * distance * distance) / denominator;
+
+        if (velocitySquared <= 0 ||
+                Double.isNaN(velocitySquared) ||
+                Double.isInfinite(velocitySquared)) {
+            return 0;
+        }
+
+        return Math.sqrt(velocitySquared);
+    }
+
+    // ==========================================
+    // PROJECTILE FLIGHT TIME
+    // ==========================================
+
+    /**
+     * Calculates flight time from horizontal distance
+     * and initial projectile velocity.
+     */
+
+    public double calculateFlightTime(
+            double distance,
+            double initialVelocity
+    ) {
+
+        double angle = Math.toRadians(shootingAngle);
+
+        double horizontalVelocity =
+                initialVelocity * Math.cos(angle);
+
+        if (distance <= 0 || horizontalVelocity <= 0) {
+            return 0;
+        }
+
+        return distance / horizontalVelocity;
+    }
+
+    /**
+     * Calculates flight time automatically using
+     * the required exit velocity.
+     */
+
+    public double calculateFlightTime(double distance) {
+
+        double velocity = calculateExitVelocity(distance);
+
+        if (velocity <= 0) {
+            return 0;
+        }
+
+        return calculateFlightTime(distance, velocity);
+    }
+
+    // ==========================================
+    // MOTOR SPEED CONVERSION
+    // ==========================================
+
+    /**
+     * Converts projectile exit velocity into the
+     * required launcher motor velocity.
+     *
+     * Uses the linear calibration from your
+     * Pollen calibration tuner.
+     */
+
+    public double calculateMotorSpeed(double targetExitVelocity) {
+
+        // ======================================
+        // PROJECTILE SETTINGS
+        // ======================================
+
+        double angle = Math.toRadians(shootingAngle);
+
+        // ======================================
+        // CALCULATE EQUIVALENT FLOOR DISTANCE
+        // ======================================
+
+        // Vertical projectile equation:
+        // 0 = shooterHeight + vY*t - (g*t^2)/2
+
+        double verticalVelocity =
+                targetExitVelocity * Math.sin(angle);
+
+        double discriminant =
+                verticalVelocity * verticalVelocity
+                        + 2.0 * gravity * shooterHeight;
+
+        if (targetExitVelocity <= 0 ||
+                discriminant < 0 ||
+                Double.isNaN(discriminant) ||
+                Double.isInfinite(discriminant)) {
+            return 0;
+        }
+
+        double flightTime =
+                (verticalVelocity + Math.sqrt(discriminant))
+                        / gravity;
+
+        // Horizontal distance traveled before landing.
+        double floorDistance =
+                targetExitVelocity * Math.cos(angle) * flightTime;
+
+        if (floorDistance <= 0 ||
+                Double.isNaN(floorDistance) ||
+                Double.isInfinite(floorDistance)) {
+            return 0;
+        }
+
+        // ======================================
+        // INVERT YOUR QUADRATIC CALIBRATION
+        // ======================================
+
+        // d = a*S^2 + b*S + c
+
+        double a = 0.0000012987;
+        double b = 0.0887706;
+        double c = -59.1645;
+
+        double quadraticDiscriminant =
+                b * b - 4.0 * a * (c - floorDistance);
+
+        if (quadraticDiscriminant < 0 ||
+                Double.isNaN(quadraticDiscriminant) ||
+                Double.isInfinite(quadraticDiscriminant)) {
+            return 0;
+        }
+
+        double motorSpeed =
+                (-b + Math.sqrt(quadraticDiscriminant))
+                        / (2.0 * a);
+
+        if (motorSpeed <= 0 ||
+                Double.isNaN(motorSpeed) ||
+                Double.isInfinite(motorSpeed)) {
+            return 0;
+        }
+
+        // ======================================
+        // TELEMETRY
+        // ======================================
+
+        robot.telemetry.addData(
+                "Target Exit Velocity",
+                targetExitVelocity
+        );
+
+        robot.telemetry.addData(
+                "Equivalent Floor Distance",
+                floorDistance
+        );
+
+        robot.telemetry.addData(
+                "Calculated Motor Speed",
+                motorSpeed
+        );
+
+        return Math.min(
+                motorSpeed,
+                Constants.LAUNCHER_MAX_VELOCITY
+        );
     }
 
     // ==========================================
@@ -114,7 +340,7 @@ public class Launcher extends SubsystemBase {
                 Constants.LAUNCHER_MAX_VELOCITY
         );
 
-        // Original negative velocity convention.
+        // Preserve original negative velocity convention.
         double signedVelocity = -clampedSpeed;
 
         double signedAcceleration = targetSpeed == 0 ? 0 : -targetAcceleration;
@@ -188,7 +414,7 @@ public class Launcher extends SubsystemBase {
 
     public void update() {
 
-        // Preserve your working encoder convention.
+        // Preserve original encoder convention.
         double currentVelocity =
                 -robot.launchEncoder.getCorrectedVelocity();
 
@@ -196,7 +422,7 @@ public class Launcher extends SubsystemBase {
         double targetVelocity =
                 spinner.getGoal().getVelocity();
 
-        // Convert to positive magnitudes for comparison.
+        // Convert to positive magnitudes.
         double targetSpeed = -targetVelocity;
 
         double error = targetSpeed - currentVelocity;
@@ -220,14 +446,12 @@ public class Launcher extends SubsystemBase {
         // MODE SWITCHING
         // ======================================
 
-        // Enter Bang-Bang when significantly below target.
         if (!bangBangActive &&
                 error > bangBangThreshold) {
 
             bangBangActive = true;
         }
 
-        // Return to PIDF when close to target.
         if (bangBangActive &&
                 error <= velocityTolerance) {
 
@@ -240,14 +464,12 @@ public class Launcher extends SubsystemBase {
 
         if (bangBangActive) {
 
-            // Same direction and output as your
-            // previously working Bang-Bang controller.
             motorOutput = -maxPower;
 
         }
 
         // ======================================
-        // ORIGINAL NEXTFTC PIDF MODE
+        // PIDF MODE
         // ======================================
 
         else {
@@ -260,7 +482,6 @@ public class Launcher extends SubsystemBase {
                     )
             );
 
-            // Limit output.
             motorOutput = Math.max(
                     -maxPower,
                     Math.min(motorOutput, maxPower)
@@ -289,11 +510,21 @@ public class Launcher extends SubsystemBase {
             return;
         }
 
+        // ======================================
+        // MANUAL MODE
+        // ======================================
+
         if (manual) {
 
             setGoal(manualSpeed, 0);
 
-        } else if (shotOnMove) {
+        }
+
+        // ======================================
+        // SHOOTING WHILE MOVING
+        // ======================================
+
+        else if (shotOnMove) {
 
             setGoal(
                     shotSpeed,
@@ -302,18 +533,45 @@ public class Launcher extends SubsystemBase {
 
             servoPos = shotHood;
 
-        } else {
-
-            // Distance-based shooting.
-            goalDistance = robot.getGoalDistance();
-
-            speed = 9.06593 * goalDistance
-                    + 1158.79121;
-
-            setGoal(speed, 0);
         }
 
-        // Hood control.
+        // ======================================
+        // PHYSICS-BASED DISTANCE SHOOTING
+        // ======================================
+
+        else {
+
+            goalDistance = robot.getGoalDistance();
+
+            // Calculate required Pollen exit velocity.
+            exitVelocity = calculateExitVelocity(goalDistance);
+
+            // Calculate estimated projectile flight time.
+            flightTime = calculateFlightTime(
+                    goalDistance,
+                    exitVelocity
+            );
+            robot.telemetry.addData("TargetExit",exitVelocity);
+
+            // Convert projectile velocity into motor velocity.
+            speed = calculateMotorSpeed(exitVelocity);
+
+            // Only command the launcher if calibration
+            // coefficients have been entered.
+            if (speed > 0) {
+
+                setGoal(speed, 0);
+
+            } else {
+
+                setGoal(0, 0);
+            }
+        }
+
+        // ======================================
+        // HOOD CONTROL
+        // ======================================
+
         servoPos = Math.max(
                 servoPos,
                 hoodMinimum
@@ -321,7 +579,10 @@ public class Launcher extends SubsystemBase {
 
         robot.hoodServo.set(servoPos);
 
-        // Hybrid controller.
+        // ======================================
+        // HYBRID CONTROLLER
+        // ======================================
+
         update();
 
         // ======================================
@@ -354,8 +615,53 @@ public class Launcher extends SubsystemBase {
         );
 
         robot.telemetry.addData(
-                "Launcher Distance",
+                "Launcher Distance (in)",
                 goalDistance
+        );
+
+        robot.telemetry.addData(
+                "Required Exit Velocity (in/s)",
+                exitVelocity
+        );
+
+        robot.telemetry.addData(
+                "Projectile Flight Time (s)",
+                flightTime
+        );
+
+        robot.telemetry.addData(
+                "Calculated Motor Speed",
+                speed
+        );
+
+        robot.telemetry.addData(
+                "Calibration Available",
+                calibrationSlope != 0
+        );
+
+        robot.telemetry.addData(
+                "Calibration Slope",
+                calibrationSlope
+        );
+
+        robot.telemetry.addData(
+                "Calibration Intercept",
+                calibrationIntercept
+        );
+
+        robot.telemetry.addData(
+                "Hive Height (in)",
+                hiveHeight
+        );
+
+        robot.telemetry.addData(
+                "Shooter Height (in)",
+                shooterHeight
+        );
+
+        robot.telemetry.addData(
+                "Shooting Angle (degrees)",
+                shootingAngle
         );
 
         robot.telemetry.addData(

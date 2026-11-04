@@ -2,7 +2,6 @@
 package org.firstinspires.ftc.teamcode.Solvers.Subsystems;
 
 import com.bylazar.configurables.annotations.Configurable;
-import com.bylazar.telemetry.PanelsTelemetry;
 import com.pedropathing.math.Pose;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
@@ -20,6 +19,12 @@ import dev.nextftc.control.feedforward.BasicFeedforwardParameters;
 @Configurable
 public class Turret extends SubsystemBase {
 
+    private final Robot robot = Robot.getInstance();
+
+    // ==========================================
+    // PID CONTROL
+    // ==========================================
+
     public static PIDCoefficients turretPid =
             new PIDCoefficients(0.01, 0, 0);
 
@@ -33,8 +38,6 @@ public class Turret extends SubsystemBase {
                     .posPid(turretPid)
                     .basicFF(turretFF)
                     .build();
-
-    private final Robot robot = Robot.getInstance();
 
     // ==========================================
     // GEAR RATIOS
@@ -64,8 +67,27 @@ public class Turret extends SubsystemBase {
 
     public static boolean AUTO_ALIGN = true;
 
-    // Mechanical calibration correction.
-    public static double HIVE_OFFSET = -9;
+    // ==========================================
+    // POSITION-DEPENDENT HIVE OFFSET
+    // ==========================================
+
+    // These are calibration corrections based on
+    // the robot's position around the hive.
+    //
+    // They are NOT based on robot heading.
+    //
+    // Position angle:
+    // 0   = robot is to the right of hive
+    // 90  = robot is above hive
+    // 180 = robot is to the left of hive
+    //
+    // Values are in degrees.
+
+    public static double OFFSET_0_DEG = -9;
+    public static double OFFSET_45_DEG = -9;
+    public static double OFFSET_90_DEG = -9;
+    public static double OFFSET_135_DEG = -9;
+    public static double OFFSET_180_DEG = -9;
 
     // ==========================================
     // TURRET PHYSICAL OFFSET
@@ -93,7 +115,6 @@ public class Turret extends SubsystemBase {
     public boolean Near = false;
     public boolean enabled = true;
 
-    // Shot-on-the-move state.
     public boolean shotOnMove = false;
     public boolean calibrating = false;
     public double calibratedOffset = 0.0;
@@ -106,14 +127,79 @@ public class Turret extends SubsystemBase {
         return Math.max(min, Math.min(value, max));
     }
 
-    /**
-     * Finds the equivalent angle closest to the current
-     * position while respecting mechanical limits.
-     */
-    public void calibrate() {
-        calibrating = true;
-        robot.turretMotor.set(0.5);
+    private double wrapDegrees(double angle) {
+
+        while (angle > 180) {
+            angle -= 360;
+        }
+
+        while (angle < -180) {
+            angle += 360;
+        }
+
+        return angle;
     }
+    public static double getHiveOffset(double robotX, double robotY) {
+
+        Robot robot = Robot.getInstance();
+
+        Pose hivePose = robot.getHive();
+
+        // Position relative to hive.
+        double deltaX = robotX - hivePose.x();
+        double deltaY = robotY - hivePose.y();
+
+        // Position angle around hive.
+        // Independent of robot heading.
+        double positionAngle = Math.toDegrees(
+                Math.atan2(deltaY, deltaX)
+        );
+
+        positionAngle = Math.abs(
+                ((positionAngle % 360) + 540) % 360 - 180
+        );
+
+        double[] angles = {
+                0, 45, 90, 135, 180
+        };
+
+        double[] offsets = {
+                OFFSET_0_DEG,
+                OFFSET_45_DEG,
+                OFFSET_90_DEG,
+                OFFSET_135_DEG,
+                OFFSET_180_DEG
+        };
+
+        double offset;
+
+        if (positionAngle >= 180) {
+            offset = offsets[4];
+        } else {
+
+            offset = offsets[0];
+
+            for (int i = 0; i < angles.length - 1; i++) {
+
+                if (positionAngle >= angles[i]
+                        && positionAngle <= angles[i + 1]) {
+
+                    double t = (positionAngle - angles[i])
+                            / (angles[i + 1] - angles[i]);
+
+                    offset = offsets[i]
+                            + t * (offsets[i + 1] - offsets[i]);
+
+                    break;
+                }
+            }
+        }
+
+        return robot.hiveIndex == 0
+                ? offset
+                : -offset;
+    }
+
     private double getClosestValidAngle(double angle) {
 
         double bestAngle = clamp(angle, MIN_ANGLE, MAX_ANGLE);
@@ -140,15 +226,88 @@ public class Turret extends SubsystemBase {
     }
 
     // ==========================================
-    // HIVE ALIGNMENT WITH GEOMETRIC COMPENSATION
+    // POSITION-DEPENDENT OFFSET INTERPOLATION
     // ==========================================
 
     /**
-     * Calculates the turret angle needed to point
-     * toward the hive.
+     * Calculates the optimal correction based on
+     * the robot's position angle around the hive.
      *
-     * Compensates for the turret pivot being displaced
-     * from the robot's localization origin.
+     * Robot heading is not used.
+     */
+    private double getOptimalHiveOffset(double positionAngle) {
+
+        positionAngle = Math.abs(wrapDegrees(positionAngle));
+
+        double[] angles = {
+                0, 45, 90, 135, 180
+        };
+
+        double[] offsets = {
+                OFFSET_0_DEG,
+                OFFSET_45_DEG,
+                OFFSET_90_DEG,
+                OFFSET_135_DEG,
+                OFFSET_180_DEG
+        };
+
+        if (positionAngle <= 0) {
+            return offsets[0];
+        }
+
+        if (positionAngle >= 180) {
+            return offsets[4];
+        }
+
+        for (int i = 0; i < angles.length - 1; i++) {
+
+            if (positionAngle >= angles[i]
+                    && positionAngle <= angles[i + 1]) {
+
+                double t = (positionAngle - angles[i])
+                        / (angles[i + 1] - angles[i]);
+
+                return offsets[i]
+                        + t * (offsets[i + 1] - offsets[i]);
+            }
+        }
+
+        return offsets[0];
+    }
+
+    // ==========================================
+    // TURRET PIVOT GEOMETRY
+    // ==========================================
+
+    private double getTurretPivotX(Pose pose) {
+
+        double heading = pose.heading();
+
+        return pose.x()
+                + TURRET_OFFSET_X * Math.cos(heading)
+                - TURRET_OFFSET_Y * Math.sin(heading);
+    }
+
+    private double getTurretPivotY(Pose pose) {
+
+        double heading = pose.heading();
+
+        return pose.y()
+                + TURRET_OFFSET_X * Math.sin(heading)
+                + TURRET_OFFSET_Y * Math.cos(heading);
+    }
+
+    // ==========================================
+    // HIVE ANGLE CALCULATION
+    // ==========================================
+
+    /**
+     * Calculates the turret target using:
+     *
+     * 1. Robot position relative to hive.
+     * 2. Position-dependent shooting correction.
+     * 3. Robot heading for turret-relative conversion.
+     * 4. Actual turret pivot position.
      */
     public final InstantCommand calibrate = new InstantCommand(() ->
             calibrating = true
@@ -158,57 +317,98 @@ public class Turret extends SubsystemBase {
         Pose robotPose = robot.getRawPose();
         Pose hivePose = robot.getHive();
 
-        double heading = robotPose.heading();
+        // ======================================
+        // ROBOT POSITION RELATIVE TO HIVE
+        // ======================================
 
-        // Robot center position.
-        double robotX = robotPose.x();
-        double robotY = robotPose.y();
+        double deltaX = robotPose.x() - hivePose.x();
+        double deltaY = robotPose.y() - hivePose.y();
 
-        // Rotate turret offset into field coordinates.
-        double turretOffsetFieldX =
-                TURRET_OFFSET_X * Math.cos(heading)
-                        - TURRET_OFFSET_Y * Math.sin(heading);
+        // Position angle around hive.
+        // Independent of robot heading.
 
-        double turretOffsetFieldY =
-                TURRET_OFFSET_X * Math.sin(heading)
-                        + TURRET_OFFSET_Y * Math.cos(heading);
-
-        // Actual turret pivot position on the field.
-        double turretX = robotX + turretOffsetFieldX;
-        double turretY = robotY + turretOffsetFieldY;
-
-        // Vector from turret pivot to hive.
-        double deltaX = hivePose.x() - turretX;
-        double deltaY = hivePose.y() - turretY;
-
-        // Calculate absolute field angle.
-        double fieldAngle = Math.toDegrees(
+        double positionAngle = Math.toDegrees(
                 Math.atan2(deltaY, deltaX)
         );
 
+        positionAngle = wrapDegrees(positionAngle);
+
+        // ======================================
+        // FIND OPTIMAL CORRECTION
+        // ======================================
+
+        double optimalOffset =
+                getOptimalHiveOffset(positionAngle);
+
+        // ======================================
+        // ACTUAL TURRET PIVOT POSITION
+        // ======================================
+
+        double turretX = getTurretPivotX(robotPose);
+        double turretY = getTurretPivotY(robotPose);
+
+        // Vector from turret pivot to hive.
+        double turretDeltaX = hivePose.x() - turretX;
+        double turretDeltaY = hivePose.y() - turretY;
+
+        // ======================================
+        // FIELD-RELATIVE AIMING ANGLE
+        // ======================================
+
+        double fieldAngle = Math.toDegrees(
+                Math.atan2(turretDeltaY, turretDeltaX)
+        );
+
         // Convert to robot-relative angle.
-        double robotHeading = Math.toDegrees(heading);
+        double robotHeading = Math.toDegrees(
+                robotPose.heading()
+        );
 
         double angle = fieldAngle - robotHeading;
 
-        // Apply mechanical calibration correction.
+        // Apply position-dependent correction.
         angle += robot.hiveIndex == 0
-                ? HIVE_OFFSET
-                : -HIVE_OFFSET;
+                ? optimalOffset
+                : -optimalOffset;
 
-        // Telemetry.
-        robot.telemetry.addData("Robot X", robotX);
-        robot.telemetry.addData("Robot Y", robotY);
+        // ======================================
+        // TELEMETRY
+        // ======================================
 
-        robot.telemetry.addData("Turret Pivot X", turretX);
-        robot.telemetry.addData("Turret Pivot Y", turretY);
+        robot.telemetry.addData(
+                "Hive Position Angle",
+                positionAngle
+        );
 
-        robot.telemetry.addData("Hive X", hivePose.x());
-        robot.telemetry.addData("Hive Y", hivePose.y());
+        robot.telemetry.addData(
+                "Optimal Hive Offset",
+                optimalOffset
+        );
 
-        robot.telemetry.addData("Robot Heading", robotHeading);
-        robot.telemetry.addData("Hive Field Angle", fieldAngle);
-        robot.telemetry.addData("Hive Relative Angle", angle);
+        robot.telemetry.addData(
+                "Hive Field Angle",
+                fieldAngle
+        );
+
+        robot.telemetry.addData(
+                "Robot Heading",
+                robotHeading
+        );
+
+        robot.telemetry.addData(
+                "Turret Pivot X",
+                turretX
+        );
+
+        robot.telemetry.addData(
+                "Turret Pivot Y",
+                turretY
+        );
+
+        robot.telemetry.addData(
+                "Hive Turret Target",
+                -angle
+        );
 
         return -angle;
     }
@@ -217,24 +417,21 @@ public class Turret extends SubsystemBase {
     // TARGET CONTROL
     // ==========================================
 
-    /**
-     * Sets a turret target without angular velocity FF.
-     */
     public void setTargetAngle(double angle) {
         setTargetAngle(angle, 0);
     }
 
-    /**
-     * Sets a turret target and desired angular velocity.
-     * Angular velocity is in radians per second.
-     */
-    public void setTargetAngle(double angle, double angularVelocity) {
+    public void setTargetAngle(
+            double angle,
+            double angularVelocity
+    ) {
 
         TargetAngle = getClosestValidAngle(angle);
 
         targetAngularVelocity = angularVelocity;
 
-        double targetTicks = TargetAngle * TICKS_PER_DEGREE;
+        double targetTicks =
+                TargetAngle * TICKS_PER_DEGREE;
 
         turretController.setGoal(
                 new KineticState(targetTicks, 0)
@@ -279,7 +476,7 @@ public class Turret extends SubsystemBase {
     }
 
     // ==========================================
-    // TURRET PID CONTROL
+    // PID UPDATE
     // ==========================================
 
     private void update() {
@@ -301,7 +498,9 @@ public class Turret extends SubsystemBase {
 
         double output = pidOutput + velocityOutput;
 
-        robot.turretMotor.set(clamp(output, -1, 1));
+        robot.turretMotor.set(
+                clamp(output, -1, 1)
+        );
     }
 
     // ==========================================
@@ -314,7 +513,9 @@ public class Turret extends SubsystemBase {
                 robot.turretEncoder.getPosition()
                         / (TICKS_PER_DEGREE) + calibratedOffset;
 
-        Near = Math.abs(TargetAngle - currentAngle) <= TOLERANCE;
+        Near = Math.abs(
+                TargetAngle - currentAngle
+        ) <= TOLERANCE;
 
         update();
     }
@@ -366,9 +567,20 @@ public class Turret extends SubsystemBase {
             updateTurret();
         }
 
-        robot.telemetry.addData("Turret Target", TargetAngle);
-        robot.telemetry.addData("Turret Current", currentAngle);
-        robot.telemetry.addData("Turret Near", Near);
+        robot.telemetry.addData(
+                "Turret Target",
+                TargetAngle
+        );
+
+        robot.telemetry.addData(
+                "Turret Current",
+                currentAngle
+        );
+
+        robot.telemetry.addData(
+                "Turret Near",
+                Near
+        );
 
         robot.telemetry.addData(
                 "Turret Velocity FF",

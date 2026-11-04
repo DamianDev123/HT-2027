@@ -23,15 +23,6 @@ public class ShootingWhileMoving extends SubsystemBase {
     public static double ANGULAR_VELOCITY_DEADBAND = 200000.0;
     public static double ACCELERATION_DEADBAND = 20.0;
 
-    // Time of flight approximation
-    public static double TOF_SLOPE = 0.012;
-    public static double TOF_OFFSET = 0.2;
-    public static double MAX_TOF = 0.7;
-    public static double MIN_TOF = 0.0;
-
-    // Wheel speed calibration
-    public static double WHEEL_SPEED_SLOPE = 9.1070;
-    public static double WHEEL_SPEED_OFFSET =1122.97115;
 
     // Sampling interval
     public static double SAMPLING_DT = 0.02;
@@ -126,17 +117,12 @@ public class ShootingWhileMoving extends SubsystemBase {
 
     public double getFlyTime(double distance) {
 
-        return clamp(
-                TOF_SLOPE * distance + TOF_OFFSET,
-                MIN_TOF,
-                MAX_TOF
-        );
+        return robot.launcher.calculateFlightTime(distance);
     }
 
     private double getWheelSpeed(double distance) {
 
-        return WHEEL_SPEED_SLOPE * distance
-                + WHEEL_SPEED_OFFSET;
+        return robot.launcher.calculateMotorSpeed(robot.launcher.calculateExitVelocity(distance));
     }
 
     private double sampleRate(
@@ -380,16 +366,25 @@ public class ShootingWhileMoving extends SubsystemBase {
 
         // ---------------- TURRET ANGLE ----------------
 
+        // ---------------- TURRET ANGLE ----------------
+
+        // Field-relative direction to hive.
         double fieldAngle = Math.atan2(dy, dx);
 
-        double hiveOffset = robot.hiveIndex == 0
-                ? Math.toRadians(Turret.HIVE_OFFSET)
-                : -Math.toRadians(Turret.HIVE_OFFSET);
+        // Calculate position-dependent offset using
+        // predicted position at projectile arrival.
+        //
+        // This is NOT based on robot heading.
+        double hiveOffset = Math.toRadians(
+                Turret.getHiveOffset(futureX, futureY)
+        );
 
+        // Preserve your existing launcher adjustment.
         if (Launcher.servoPos > 0.72) {
             hiveOffset += Math.PI;
         }
 
+        // Calculate turret target.
         double wantedTurretAngle =
                 -(fieldAngle - futureHeading + hiveOffset)
                         + turretOffset;
