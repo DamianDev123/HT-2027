@@ -1,77 +1,100 @@
+
 package org.firstinspires.ftc.teamcode.Solvers.Subsystems;
 
 import com.bylazar.configurables.annotations.Configurable;
 import com.qualcomm.robotcore.hardware.DigitalChannel;
 import com.seattlesolvers.solverslib.command.InstantCommand;
-import com.seattlesolvers.solverslib.command.SequentialCommandGroup;
 import com.seattlesolvers.solverslib.command.SubsystemBase;
-import com.seattlesolvers.solverslib.command.WaitCommand;
-import com.seattlesolvers.solverslib.command.WaitUntilCommand;
 
 import org.firstinspires.ftc.teamcode.Globals.Robot;
 
-import java.util.function.BooleanSupplier;
-
 @Configurable
 public class Storage extends SubsystemBase {
+
     private final Robot robot = Robot.getInstance();
-    private DigitalChannel transfer;
+    private final DigitalChannel transferBeam;
+
     public static boolean full = false;
-    public double flapDown = 0.0;
-    public double flapUp = 0.0;
+
+    public static double flapDown = 0.0;
+    public static double flapUp = 0.0;
+
     private boolean intaking = false;
-    private boolean shooting = false; // Added to track shooting state
+    private boolean shooting = false;
 
-    BooleanSupplier notIntaking = () -> !intaking;
-
-    public InstantCommand Intake = new InstantCommand(() -> {
+    // Intake
+    public final InstantCommand Intake = new InstantCommand(() -> {
         robot.intakeMotor.set(-1);
-//        if(!full)
-//            robot.transferMotor.set(-0.5);
         intaking = true;
     });
 
-    public InstantCommand Outake = new InstantCommand(() -> {
+    public final InstantCommand Outake = new InstantCommand(() -> {
         robot.intakeMotor.set(0);
-        if(!shooting)
-            robot.transferMotor.set(0);
         intaking = false;
+
+        if (!shooting) {
+            robot.transferMotor.set(0);
+        }
     });
-    public InstantCommand IntakeT = new InstantCommand(() -> {
+
+    // Transfer
+    public final InstantCommand IntakeT = new InstantCommand(() -> {
         robot.transferMotor.set(-1);
         full = false;
-        shooting = true; // Reset shooting state when stopping
-
     });
 
-    public InstantCommand OutakeT = new InstantCommand(() -> {
-        if(!intaking)
+    public final InstantCommand OutakeT = new InstantCommand(() -> {
+        if (!intaking && !shooting) {
             robot.transferMotor.set(0);
-        shooting = false; // Reset shooting state when stopping
+        }
     });
 
-    public InstantCommand SingularShot = new InstantCommand(() -> {
-                shooting = true; // Ignore transfer state while shooting
-                full = false;
-                robot.intakeMotor.set(-1);
-                robot.transferMotor.set(-1);
-            });
+    // Shooting
+    public final InstantCommand SingularShot = new InstantCommand(() -> {
+        shooting = true;
+        full = false;
 
-
-    public InstantCommand FlapDown = new InstantCommand(() -> {
-        robot.flap.set(flapDown);
+        robot.intakeMotor.set(-1);
+        robot.transferMotor.set(-1);
     });
 
-    public InstantCommand FlapUp = new InstantCommand(() -> {
-        robot.flap.set(flapUp);
-    });
-    public Storage(){
-        transfer = robot.breakBeam1;
+    public InstantCommand shootCommand() {
+        return new InstantCommand(() -> {
+            shooting = true;
+            full = false;
+
+            // Run both motors simultaneously
+            robot.intakeMotor.set(-1);
+            robot.transferMotor.set(-1);
+        });
     }
+
+    public InstantCommand stopShootingCommand() {
+        return new InstantCommand(() -> {
+            shooting = false;
+            robot.intakeMotor.set(0);
+            robot.transferMotor.set(0);
+            intaking = false;
+        });
+    }
+
+
+    // Flap
+    public final InstantCommand FlapDown = new InstantCommand(() ->
+            robot.flap.set(flapDown)
+    );
+
+    public final InstantCommand FlapUp = new InstantCommand(() ->
+            robot.flap.set(flapUp)
+    );
+
+    public Storage() {
+        transferBeam = robot.breakBeam1;
+    }
+
     @Override
     public void periodic() {
-        // Only update 'full' from the break beam if we are NOT currently shooting
-        if (!shooting && !transfer.getState()) {
+        if (!shooting && !transferBeam.getState()) {
             full = true;
         }
     }
