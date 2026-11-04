@@ -312,7 +312,7 @@ public class Turret extends SubsystemBase {
 
         currentAngle =
                 robot.turretEncoder.getPosition()
-                        / (TICKS_PER_DEGREE + calibratedOffset);
+                        / (TICKS_PER_DEGREE) + calibratedOffset;
 
         Near = Math.abs(TargetAngle - currentAngle) <= TOLERANCE;
 
@@ -344,10 +344,11 @@ public class Turret extends SubsystemBase {
 
         if (calibrating) {
             robot.turretMotor.set(0.5);
-            if (robot.turretMotor.getCurrent(CurrentUnit.AMPS) > 4.0) {
+            if (robot.turretMotor.getCurrent(CurrentUnit.AMPS) > 3.0) {
                 robot.turretMotor.stopAndResetEncoder();
+                robot.turretMotor.set(0);
                 calibrating = false;
-                calibratedOffset = MIN_ANGLE;
+                calibratedOffset = MAX_ANGLE;
             }
         }
         else {
