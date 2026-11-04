@@ -10,8 +10,8 @@ public class Constants {
 
     public static String ALLIANCE_COLOR = "RED";
     public static double LAUNCHER_MAX_VELOCITY = 2500; // Ticks/second
-    public static Pose[] redHive = new Pose[] {new Pose(58.75,51.8),new Pose(58.75,90)};
-    public static Pose[] blueHive = new Pose[] {new Pose(85.5,51.8),new Pose(85.5,90)};
+    public static Pose[] redHive = new Pose[] {new Pose(58.75,59.8),new Pose(58.75,80)};
+    public static Pose[] blueHive = new Pose[] {new Pose(85.5,59.8),new Pose(85.5,80)};
     public enum OpModeType {
         AUTO,
         TELEOP
