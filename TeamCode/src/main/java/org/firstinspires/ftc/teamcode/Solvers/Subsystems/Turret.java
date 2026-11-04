@@ -4,8 +4,11 @@ package org.firstinspires.ftc.teamcode.Solvers.Subsystems;
 import com.bylazar.configurables.annotations.Configurable;
 import com.bylazar.telemetry.PanelsTelemetry;
 import com.pedropathing.math.Pose;
+import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.seattlesolvers.solverslib.command.SubsystemBase;
 
+import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
 import org.firstinspires.ftc.teamcode.Globals.Robot;
 
 import dev.nextftc.control.ControlSystem;
@@ -91,6 +94,8 @@ public class sTurret extends SubsystemBase {
 
     // Shot-on-the-move state.
     public boolean shotOnMove = false;
+    public boolean calibrating = true;
+    public double calibratedOffset = 0.0;
 
     // ==========================================
     // UTILITY
@@ -104,6 +109,10 @@ public class sTurret extends SubsystemBase {
      * Finds the equivalent angle closest to the current
      * position while respecting mechanical limits.
      */
+    public void calibrate() {
+        calibrating = true;
+        robot.turretMotor.set(0.5);
+    }
     private double getClosestValidAngle(double angle) {
 
         double bestAngle = clamp(angle, MIN_ANGLE, MAX_ANGLE);
@@ -299,7 +308,7 @@ public class sTurret extends SubsystemBase {
 
         currentAngle =
                 robot.turretEncoder.getPosition()
-                        / TICKS_PER_DEGREE;
+                        / (TICKS_PER_DEGREE + calibratedOffset);
 
         Near = Math.abs(TargetAngle - currentAngle) <= TOLERANCE;
 
@@ -329,18 +338,28 @@ public class sTurret extends SubsystemBase {
     @Override
     public void periodic() {
 
-        if (!enabled) {
-            robot.turretMotor.set(0);
-            return;
+        if (calibrating) {
+            robot.turretMotor.set(0.5);
+            if (robot.turretMotor.getCurrent(CurrentUnit.AMPS) > 4.0) {
+                robot.turretMotor.stopAndResetEncoder();
+                calibrating = false;
+                calibratedOffset = MIN_ANGLE;
+            }
         }
+        else {
+            if (!enabled) {
+                robot.turretMotor.set(0);
+                return;
+            }
 
-        // Automatic alignment must not overwrite
-        // a shot-on-the-move target.
-        if (AUTO_ALIGN && !shotOnMove) {
-            setTargetAngle(getHiveAngle());
+            // Automatic alignment must not overwrite
+            // a shot-on-the-move target.
+            if (AUTO_ALIGN && !shotOnMove) {
+                setTargetAngle(getHiveAngle());
+            }
+
+            updateTurret();
         }
-
-        updateTurret();
 
         robot.telemetry.addData("Turret Target", TargetAngle);
         robot.telemetry.addData("Turret Current", currentAngle);
